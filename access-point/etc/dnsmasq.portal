@@ -1,0 +1,8 @@
+domain=lan
+cache-size=256
+interface=bridge1
+listen-address=127.0.0.1
+bind-interfaces
+port=5353
+resolv-file=/tmp/resolv.conf.auto
+
