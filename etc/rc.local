@@ -1,0 +1,27 @@
+## ----- USER:HEADER -----
+## ----- END USER:HEADER -----
+
+../etc/rules.sh
+mkdir /var/localdb
+sleep 5
+start-stop-daemon -p /tmp/hostapd.0.pid -x hostapd -S -- -B -P /tmp/hostapd.0.pid /etc/hostapd.conf
+ifconfig bridge1 up
+ifconfig bridge1 192.168.1.1
+sleep 5
+dnsmasq --conf-file=/etc/dnsmasq-dhcp.conf --guard-ip=192.168.1.1
+sleep 5
+dnsmasq --conf-file=/etc/dnsmasq.portal
+sleep 5
+ip_wan=$(ifconfig eth0.10 | grep 'inet addr' | cut -d: -f2 | awk '{print $1}')
+uci set uhttpd.main.listen_http=$ip_wan:80
+uci commit
+/etc/init.d/uhttpd start
+sleep 5
+/etc/init.d/cron start
+
+## ----- USER:FOOTER -----
+## ----- END USER:FOOTER -----
+
+exit 0
+
+
