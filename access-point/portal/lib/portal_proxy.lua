@@ -41,9 +41,11 @@ end
 
 function proxy.initialize_redirected_client(user_ip,user_mac)
   -- Send a request to server
+  local ap_secret = cst.ap_secret
   local cmd = CURL ..'"' .. cst.PortalUrl .. 
   '/index.php?digilan-token-action=create&user_ip=' .. 
-  user_ip ..'&ap_mac=' .. cst.ap_mac .. '"'
+  user_ip ..'&ap_mac=' .. cst.ap_mac .. 
+  '&digilan-token-secret=' .. ap_secret .. '"'
   print(cmd)
   -- server responds with secret and sid
   local server_response = io.popen(cmd):read("*a")
@@ -123,9 +125,10 @@ function proxy.validate(user_mac,user_ip,sid,secret)
 end
 
 function validate_data_on_server(user_ip,user_mac,secret,sid)
+  local ap_secret = cst.ap_secret
   local cmd  = CURL ..'"' ..  cst.PortalUrl .. '/index.php?digilan-token-action=validate&user_ip='
   .. user_ip .. '&ap_mac='.. cst.ap_mac ..
-  '&secret=' .. secret .. '&session_id=' .. sid ..'"'
+  '&secret=' .. secret .. '&session_id=' .. sid ..'&digilan-token-secret=' .. ap_secret.. '"'
   local server_response = io.popen(cmd):read("*a")
   local response        = json.parse(server_response)
   local r               = response.authenticated

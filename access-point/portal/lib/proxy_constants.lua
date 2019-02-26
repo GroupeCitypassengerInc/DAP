@@ -15,6 +15,7 @@ function constants.__init__()
   constants.ap_mac     = io.popen("cat " .. path_mac_addr):read("*l")
   constants.ap_timeout = tonumber(ini_conf_data.ap.timeout)
   constants.localdb    = ini_conf_data.localdb.path
+  constants.ap_secret  = ini_conf_data.ap.secret
 end
 
 constants.__init__()
