@@ -1,7 +1,7 @@
 #!/bin/sh
 
 sysctl -w net.ipv4.ip_forward=1 
-ip_wan=$(ifconfig eth0.10 | grep 'inet addr' | cut -d: -f2 | awk '{print $1}')
+ip_wan=$(ifconfig eth0.1 | grep 'inet addr' | cut -d: -f2 | awk '{print $1}')
 ### CLEAN ALL RULES
 
 iptables -F
@@ -34,6 +34,6 @@ iptables -A INPUT -p udp --sport 67:68 --dport 67:68 -m state --state NEW -j ACC
 
 ### FORWARD
 
-iptables -t nat -A POSTROUTING -o eth0.10 -j MASQUERADE
-iptables -A FORWARD -i eth0.10 -j ACCEPT
-iptables -A FORWARD -o eth0.10 -j ACCEPT
+iptables -t nat -A POSTROUTING -o eth0.1 -j MASQUERADE
+iptables -A FORWARD -i eth0.1 -j ACCEPT
+iptables -A FORWARD -o eth0.1 -j ACCEPT
