@@ -77,7 +77,7 @@ function handle_request(env)
       
   if status == "Lease. Not in localdb" then
     while true do
-      local i = "inotifywait -t 1 -r -e create " .. cst.localdb .. "/" .. user_mac
+      local i = "/usr/bin/inotifywait -t 1 -r -e create " .. cst.localdb .. "/" .. user_mac
       local t = os.execute(i)                                                     
       if t == 0 then break end                                                    
       break                                                                       
