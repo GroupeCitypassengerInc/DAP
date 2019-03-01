@@ -12,7 +12,7 @@ local json     = require "luci.jsonc"
 local nixio    = require "nixio"
 local fs       = require "nixio.fs"
 local proxy    = {}
-local CURL     = "curl "
+local CURL     = "/usr/bin/curl "
 
 function redirect(url)
   uhttpd.send("Status: 302 Found\r\n")
@@ -55,8 +55,11 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
     uhttpd.send("Status: 400 Bad Request\r\n")
     uhttpd.send("Content-Type: text/html\r\n")
     uhttpd.send("\r\n\r\n")
-    local cmd = "rm -rf " .. cst.localdb .. "/" .. user_mac
-    os.execute(cmd)
+    local cmd = "/bin/rm -rf " .. cst.localdb .. "/" .. user_mac
+    local x = os.execute(cmd)
+    if x ~= 0 then
+      nixio.syslog('err', cmd .. ' Failed with exit code: ' .. x)
+    end
     return false
   end
 
@@ -111,9 +114,13 @@ function proxy.validate(user_mac,user_ip,sid,secret)
   local path   = table.concat(params,"/")
   local mkdir  = fs.mkdirr(path .. "/auth")
   if mkdir == true then
-    local cmd_auth = "iptables -t nat -I PREROUTING -p udp -s " ..user_ip ..                         
+    local cmd_auth = "/usr/sbin/iptables -t nat -I PREROUTING -p udp -s " ..user_ip ..                         
     " -m mac --mac-source " .. user_mac .. " --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
-    os.execute(cmd_auth)
+    local a = os.execute(cmd_auth)
+    if a ~= 0 then
+      nixio.syslog('err', cmd_auth .. ' failed with exit code: ' .. a)
+      return false
+    end
     return true
   else
     local errno = nixio.errno()
@@ -139,17 +146,25 @@ function validate_data_on_server(user_ip,user_mac,secret,sid)
 end
 
 function proxy.deauthenticate_user(user_ip,user_mac)
-  local cmd = "iptables -t nat -D PREROUTING -p udp -s " ..user_ip .. 
+  local cmd = "/usr/sbin/iptables -t nat -D PREROUTING -p udp -s " ..user_ip .. 
   " -m mac --mac-source " .. user_mac .. " --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
-  os.execute(cmd)
-  local cmd = "rm -rf " .. cst.localdb .. "/" .. user_mac
-  os.execute(cmd)
+  local x = os.execute(cmd)
+  if x ~= 0 then
+    nixio.syslog('err',cmd .. ' failed with exit code: ' .. x)
+    return false
+  end
+  local cmd = "/bin/rm -rf " .. cst.localdb .. "/" .. user_mac
+  local y = os.execute(cmd)
+  if y ~= 0 then
+    nixio.syslog('err',cmd .. ' failed with exit code: ' .. y)
+    return false
+  end
 end
 
 function proxy.status_user(user_ip,user_mac)
   local params    = {cst.localdb,user_mac,user_ip}
   local select_db = table.concat(params,"/")
-  local cmd_sid   = "ls " .. select_db
+  local cmd_sid   = "/bin/ls " .. select_db
   local x = os.execute(cmd_sid .. " &> /dev/null")
   if x ~= 0 then
     return "Lease. Not in localdb"
@@ -161,7 +176,7 @@ function proxy.status_user(user_ip,user_mac)
   local cmd_secret = "ls " .. select_db .."/" .. sid_db 
   local secret_db  = io.popen(cmd_secret):read("*l")
   user_mac         = string.upper(user_mac)
-  local cmd = "iptables-save | grep ".. user_ip .. " | grep " .. user_mac .. " > /dev/null"
+  local cmd = "/usr/sbin/iptables-save | /bin/grep ".. user_ip .. " | /bin/grep " .. user_mac .. " > /dev/null"
   if os.execute(cmd) ~= 0 then
     return "User in localdb"
   end
