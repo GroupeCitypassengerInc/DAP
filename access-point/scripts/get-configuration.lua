@@ -8,7 +8,7 @@ local reload = require 'reloader'
 
 ------------------------
 --------- GET CONFIG CITYSCOPE
------------------------
+------------------------
 --[[
 --
 --  GENERATE INI FILE
@@ -103,25 +103,25 @@ local domain = url:match('^%w+://([^/]+)')
 local cmd = '/bin/grep "' .. domain .. '" /etc/dnsmasq-white.conf'
 local x = os.execute(cmd)
 
-if x == 0 then
-  return true
+if x == 1 then
+  -- Append portal url to white list
+  local cmd = '/bin/echo ' .. domain .. ' >> /etc/dnsmasq-white.conf'
+  y = os.execute(cmd)
+  if y ~= 0 then
+    nixio.syslog('err','Could not append portal url to whitelist. Exit code: ' 
+    .. y)
+  end
+  nixio.syslog('info','Updated whitelist.')
+
+  -- Restart dnsmasq
+  reload.dnsmasq()
+elseif x ~= 0 then
+  nixio.syslog('err','grep failed. Exit code: ' .. x)
+  return false
 end
-
--- Append portal url to white list
-local cmd = '/bin/echo ' .. domain .. ' >> /etc/dnsmasq-white.conf'
-y = os.execute(cmd)
-if y ~= 0 then
-  nixio.syslog('err','Could not append portal url to whitelist. Exit code: ' 
-  .. y)
-end
-nixio.syslog('info','Updated whitelist.')
-
--- Restart dnsmasq
-reload.dnsmasq()
-
 ------------------------
 --------- GET CONFIG WORDPRESS 
------------------------
+------------------------
 
 if url == nil then
   return false
@@ -133,6 +133,10 @@ local resp = io.popen(cmd):read('*a')
 resp = json.parse(resp)
 --- Update timeout
 data = parser.load('/etc/proxy.ini')
+if tonumber(resp['timeout']) == nil then
+  nixio.syslog('err',resp['timeout'] .. ' is not a number.')
+  return false
+end
 if data.ap.timeout ~= resp['timeout'] then
   data.ap.timeout = resp['timeout']
   parser.save('/etc/proxy.ini',data)
@@ -257,11 +261,13 @@ end
 
 -- Update ssid
 if resp['ssid'] ~= data.ap.ssid then
-  local cmd = '/bin/sed -i "s##' .. resp['ssid'].. '#g" hostapd.solo.conf'
+  local cmd = '/bin/sed -i "s#^ssid=.*$#ssid=' .. resp['ssid'] .. '#" hostapd.solo.conf'
   local u = os.execute(cmd)
   if u ~= 0 then
     nixio.syslog('err','Could not replace with sed. Exit code: ' .. u)
     return false
   end
+  data.ap.ssid = resp['ssid']
+  parser.save('/etc/proxy.ini',data)
   reload.hostapd()
 end
