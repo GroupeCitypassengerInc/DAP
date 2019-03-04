@@ -7,8 +7,8 @@ local nixio        = require "nixio"
 local path_dhcp = "/tmp/dhcp.leases"
 local dhcp_leases = io.open("/tmp/dhcp.leases")
 for line in dhcp_leases:lines() do
-  local mac = io.popen("echo " .. line .. " | awk '{print $2}'"):read("*l")
-  local ip  = io.popen("echo " .. line .. " | awk '{print $3}'"):read("*l")
+  local mac = io.popen("/bin/echo " .. line .. " | awk '{print $2}'"):read("*l")
+  local ip  = io.popen("/bin/echo " .. line .. " | awk '{print $3}'"):read("*l")
   local status = portal_proxy.status_user(ip,mac)
   if status == "Authenticated" then
     local cmd = "ls /var/localdb/" .. mac .. "/" .. ip
