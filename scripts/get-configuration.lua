@@ -1,9 +1,14 @@
 #!/usr/bin/lua
 package.path = package.path .. ';/portal/lib/?.lua'
+package.path = package.path .. ';/scripts/lib/?.lua'
 local parser = require 'LIP'
 local json   = require 'luci.jsonc'
 local nixio  = require 'nixio'
+local reload = require 'reloader'
 
+------------------------
+--------- GET CONFIG CITYSCOPE
+-----------------------
 --[[
 --
 --  GENERATE INI FILE
@@ -14,8 +19,8 @@ local nixio  = require 'nixio'
 -- API Call - GET /ws/DAP/{mac}
  
 local path_addr = '/sys/devices/platform/ag71xx.0/net/eth0/address'
-local mac     = io.popen('cat ' .. path_addr):read('*l')
-local api_key = io.popen('cat /root/.ssh/apikey'):read('*l')
+local mac     = io.popen('/bin/cat ' .. path_addr):read('*l')
+local api_key = io.popen('/bin/cat /root/.ssh/apikey'):read('*l')
 local data =
 {
   localdb=
@@ -27,22 +32,28 @@ local data =
     timeout=7200,
     mac_addr=path_addr,
     secret='',
+    ssid='Borne Autonome',
   },
   portal=
   {
     url='',
+    google='',
+    facebook='',
+    twitter='',
   }
 }
 
 if api_key == nil then
-  resp = nil  
+  resp = nil
 else
-  local cmd     = 'curl -H "CityscopeApiKey: ' .. api_key .. 
-  '" -H "accept: application/json" "https://preprod.citypassenger.com/ws/DAP/' 
+  local cmd  = '/usr/bin/curl -H "CityscopeApiKey: ' .. api_key ..
+  '" -H "accept: application/json" "https://preprod.citypassenger.com/ws/DAP/'
   .. mac .. '"'
   local resp = io.popen(cmd):read('*a')
   local resp = json.parse(resp)
 end
+
+changed = false
 
 if resp == nil then
   parser.save('/etc/proxy.ini',data)
@@ -50,7 +61,7 @@ if resp == nil then
 else
   local url = resp['portalUrl']
   local secret = resp['secret']
-  local cmd = 'test -e /etc/proxy.ini'
+  local cmd = '/usr/bin/test -e /etc/proxy.ini'
   local c   = os.execute(cmd)
   if c == 0 then
     current_data = parser.load('/etc/proxy.ini')
@@ -58,21 +69,27 @@ else
     current_secret = current_data.ap.secret
     if current_url == url and current_secret == secret then
       nixio.syslog('info','Nothing to update.')
-      return true
+    else
+      changed = true
+      data.ap.secret=secret
+      data.portal.url=url
+      parser.save('/etc/proxy.ini',data)
+      nixio.syslog('info','Configuration saved.')
     end
   else
-    nixio.syslog('info','No proxy.ini file found. Creating a new one.') 
+    changed = true
+    nixio.syslog('info','No proxy.ini file found. Creating a new one.')
+    data.ap.secret=secret
+    data.portal.url=url
+    parser.save('/etc/proxy.ini',data)
+    nixio.syslog('info','Configuration saved.')
   end
-  -- Create ini file
-  data.ap.secret=secret
-  data.portal.url=url
-  parser.save('/etc/proxy.ini',data)
-  nixio.syslog('info','Configuration saved.')
 end
 
 -- Restart uhttpd
-os.execute('/etc/init.d/uhttpd restart')
-
+if changed then
+  reload.uhttpd()
+end 
 --[[
 --
 --  UPDATE DNSMASQ WHITE LIST FILE
@@ -83,7 +100,7 @@ os.execute('/etc/init.d/uhttpd restart')
 local domain = url:match('^%w+://([^/]+)')
 
 -- Checks if portal is in white list
-local cmd = 'grep "' .. domain .. '" /etc/dnsmasq-white.conf'
+local cmd = '/bin/grep "' .. domain .. '" /etc/dnsmasq-white.conf'
 local x = os.execute(cmd)
 
 if x == 0 then
@@ -91,7 +108,7 @@ if x == 0 then
 end
 
 -- Append portal url to white list
-local cmd = 'echo ' .. domain .. ' >> /etc/dnsmasq-white.conf'
+local cmd = '/bin/echo ' .. domain .. ' >> /etc/dnsmasq-white.conf'
 y = os.execute(cmd)
 if y ~= 0 then
   nixio.syslog('err','Could not append portal url to whitelist. Exit code: ' 
@@ -100,22 +117,151 @@ end
 nixio.syslog('info','Updated whitelist.')
 
 -- Restart dnsmasq
-local cmd = "killall dnsmasq"
-s = os.execute(cmd)
-if s ~= 0 then
-  nixio.syslog('err','Could not kill all dnsmasq processes. Exit code: '
-  .. s)
+reload.dnsmasq()
+
+------------------------
+--------- GET CONFIG WORDPRESS 
+-----------------------
+
+if url == nil then
+  return false
 end
-local DNSMASQ = 'dnsmasq --conf-file='
-local dnsmasq1 = DNSMASQ .. '/etc/dnsmasq-dhcp.conf --guard-ip=192.168.1.1'
-local dnsmasq2 = DNSMASQ .. '/etc/dnsmasq.portal'
-local d1 = os.execute(dnsmasq1)
-if d1 ~= 0 then
-  nixio.syslog('err','Could not start ' .. dnsmasq1  .. '. Exit code: '
-  .. d1)
+
+local cmd = '/usr/bin/curl "' .. url .. '/index.php?digilan-action=configure&secret=' .. ap_secret .. '"'
+local resp = io.popen(cmd):read('*a')
+
+resp = json.parse(resp)
+--- Update timeout
+data = parser.load('/etc/proxy.ini')
+if data.ap.timeout ~= resp['timeout'] then
+  data.ap.timeout = resp['timeout']
+  parser.save('/etc/proxy.ini',data)
 end
-local d2 = os.execute(dnsmasq2)
-if d2 ~= 0 then
-  nixio.syslog('err','Could not start ' .. dnsmasq2  .. '. Exit code: '
-  .. d2)
+
+--- Get providers statuses to update whitelist accordingly
+
+google_domains =
+{
+'accounts.google.com',
+'ssl.gstatic.com',
+'gstatic.com',
+'apis.google.com',
+'accounts.google.ca',
+'accounts.google.fr',
+'accounts.google.us',
+'accounts.google.de',
+'accounts.google.es',
+'accounts.google.be',
+'accounts.google.it',
+}
+
+twitter_domains =
+{
+'api.twitter.com',
+'www.twitter.com',
+'twitter.com',
+'*.twimg.com',
+}
+
+facebook_domains =
+{
+'www.facebook.com',
+'m.facebook.com',
+'staticxx.facebook.com',
+'*.fbcdn.net',
+'connect.facebook.net',
+'ocsp.int-x3.letsencrypt.org',
+'cert.int-x3.letsencrypt.org',
+}
+
+local changed = false
+if resp['google'] ~= data.portal.google then
+  changed = true
+  data.portal.google = resp['google']
+  if resp['google'] then
+    -- Add google auth domains to whitelist
+    f = io.open('/etc/dnsmasq-white.conf','r+')
+    s = f:read('*a')
+    f:seek('set')
+    for i,u in ipairs(google_domains) do
+      s = s .. u .. '\n'
+    end
+    t = f:write(s)
+    f:close()
+  else
+    -- Delete google auth domains from whitelist
+    f = io.open('/etc/dnsmasq-white.conf','r+')
+    s = f:read('*a')
+    f:seek('set')
+    for i,u in ipairs(google_domains) do
+      s = string.gsub(s,'\n' .. u,'')
+    end
+    t = f:write(s)
+    f:close()
+  end
+end
+if resp['facebook'] ~= data.portal.facebook then
+  changed = true
+  data.portal.facebook = resp['facebook']
+  if resp['facebook'] then
+    -- Add facebook auth domains to whitelist
+    f = io.open('/etc/dnsmasq-white.conf','r+')
+    s = f:read('*a')
+    f:seek('set')
+    for i,u in ipairs(facebook_domains) do
+      s = s .. u .. '\n'
+    end
+    t = f:write(s)
+    f:close()
+  else
+    -- Delete facebook auth domains from whitelist
+    f = io.open('/etc/dnsmasq-white.conf','r+')
+    s = f:read('*a')
+    f:seek('set')
+    for i,u in ipairs(facebook_domains) do
+      s = string.gsub(s,'\n' .. u,'')
+    end
+    t = f:write(s)
+    f:close()
+  end
+end
+if resp['twitter'] ~= data.portal.twitter then
+  changed = true
+  data.portal.twitter = resp['twitter']
+  if resp['twitter'] then
+    -- Add twitter auth domains to whitelist
+    f = io.open('/etc/dnsmasq-white.conf','r+')
+    s = f:read('*a')
+    f:seek('set')
+    for i,u in ipairs(twitter_domains) do
+      s = s .. u .. '\n'
+    end
+    t = f:write(s)
+    f:close()
+  else
+    -- Delete twitter auth domains from whitelist
+    f = io.open('/etc/dnsmasq-white.conf','r+')
+    s = f:read('*a')
+    f:seek('set')
+    for i,u in ipairs(twitter_domains) do
+      s = string.gsub(s,'\n' .. u,'')
+    end
+    t = f:write(s)
+    f:close()
+  end
+end
+if changed then
+  parser.save('/etc/proxy.ini',data)
+  reload.dnsmasq()
+end
+
+-- Update ssid
+if resp['ssid'] ~= data.ap.ssid then
+  local cmd = '/bin/sed -i "s##' .. resp['ssid'].. '#g" hostapd.solo.conf'
+  local u = os.execute(cmd)
+  if u ~= 0 then
+    nixio.syslog('err','Could not replace with sed. Exit code: ' .. u)
+    return false
+  end
+  reload.hostapd()
 end
