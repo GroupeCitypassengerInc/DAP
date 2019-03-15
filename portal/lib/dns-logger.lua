@@ -24,62 +24,41 @@ function log.is_dns_query(line)
   return s == 'query[A]'
 end
 
-function log.get_domain(line)
+function split_line(line)
+  local words = {}
   local re = '[%w.-]+'
-  local n = 0
-  for w in string.gmatch(line,re) do
-    n = n + 1
-    if n == 10 then
-      return w
-    end
-    if n > 10 then
-      break
-    end 
+  for w in string.gmatch(line, re) do
+   table.insert(words, w)
   end
+  return words
+end
+
+function log.get_domain(line)
+  local t = split_line(line)
+  return t[10]
 end
 
 function log.get_source_ip(line)
-  local re = '[%w.-]+'
-  local n = 0      
-  for w in string.gmatch(line,re) do
-    n = n + 1
-    if n == 12 then
-      if data.ip4addr(w) == false then
-        return false
-      end
-      return w     
-    end   
-  end
+  local t = split_line(line)
+  return t[12]
 end
 
 function get_month(m)
-  t = {Jan='01',Feb='02',Mar='03',Apr='04',May='05',Jun='06',Jul='07',Aug='08',Sep='09',Oct='10',Nov='11',Dec='12'}
+  t = {Jan='01', Feb='02', Mar='03', Apr='04', May='05', Jun='06', Jul='07', Aug='08', Sep='09', Oct='10', Nov='11', Dec='12'}
   return t[m]
 end
 
 -- Extracts and parse date time from log line with a YYYY-MM-DD HH:mm:ss format
 function log.get_date(line)
-  re = '[%w.-]+'
-  local n = 0
+  t = split_line(line)
   d = {}
-  d[1] = os.date('%Y')
-  for w in string.gmatch(line,re) do
-    n = n + 1
-    if n == 1 then
-      local m = get_month(w)
-      d[2] = m
-    elseif n == 2 then
-      d[3] = w 
-    elseif n == 3 then                                                                                                                                            
-      d[4] = w                                                                                                                                                
-    elseif n == 4 then                                                                                                                                            
-      d[5] = w
-    elseif n == 5 then                                                                                                                                            
-      d[6] = w
-    else
-      break                                                                                                                                                
-    end
-  end
+  d[1] = os.date('%Y') -- Year
+  local m = get_month(w)
+  d[2] = m     -- Month
+  d[3] = t[2]  -- Day
+  d[4] = t[3]  -- Hour
+  d[5] = t[4]  -- Minutes
+  d[6] = t[5]  -- Seconds
   date = '%s-%s-%s'
   date = string.format(date,d[1],d[2],d[3])
   time = '%s:%s:%s'
