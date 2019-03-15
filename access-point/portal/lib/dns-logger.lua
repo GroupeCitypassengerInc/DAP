@@ -25,7 +25,7 @@ function log.is_dns_query(line)
 end
 
 function split_line(line)
-  local words = {}
+  words = {}
   local re = '[%w.-]+'
   for w in string.gmatch(line, re) do
    table.insert(words, w)
@@ -50,15 +50,15 @@ end
 
 -- Extracts and parse date time from log line with a YYYY-MM-DD HH:mm:ss format
 function log.get_date(line)
-  t = split_line(line)
-  d = {}
+  local t = split_line(line)
+  local d = {}
   d[1] = os.date('%Y') -- Year
-  local m = get_month(w)
+  local m = get_month(t[1])
   d[2] = m     -- Month
   d[3] = t[2]  -- Day
   d[4] = t[3]  -- Hour
-  d[5] = t[4]  -- Minutes
-  d[6] = t[5]  -- Seconds
+  d[5] = t[4]  -- Minute
+  d[6] = t[5]  -- Second
   date = '%s-%s-%s'
   date = string.format(date,d[1],d[2],d[3])
   time = '%s:%s:%s'
