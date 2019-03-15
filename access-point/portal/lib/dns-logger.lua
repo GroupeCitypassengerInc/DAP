@@ -81,6 +81,7 @@ function log.insert_log(date,domain,source)
     nixio.syslog('err', 'Invalid domain length.')
     return false
   end
+  -- Get session id and secret to find user_id for this connection in WP tables.
   local cmd = '/usr/bin/find /var/localdb -name %s -type d'
   cmd = string.format(cmd,source)
   local dir = io.popen(cmd):read('*l')
@@ -95,6 +96,9 @@ function log.insert_log(date,domain,source)
   env = assert(sql.mysql())
   connect = assert(env:connect(db_name,login,password,host))
   cur = assert(connect:execute(query))
+  cur:close()
+  connect:close()
+  env:close()
 end
 
 return log
