@@ -81,6 +81,16 @@ function log.insert_log(date,domain,source)
     nixio.syslog('err', 'Invalid domain length.')
     return false
   end
+  local re = '%d%d%d%d%-%d%d%-%d%d% %d%d%:%d%d%:%d%d'
+  local s = string.find(date,re)
+  if s == nil then
+    nixio.syslog('err', 'Invalid date format:' .. date)
+    return false
+  end
+  if string.sub(date,s) ~= date then
+    nixio.syslog('err', 'Date not matched, got: ' .. date)
+    return false
+  end
   -- Get session id and secret to find user_id for this connection in WP tables.
   local cmd = '/usr/bin/find /var/localdb -name %s -type d'
   cmd = string.format(cmd,source)
