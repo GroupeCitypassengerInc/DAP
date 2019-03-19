@@ -106,13 +106,13 @@ function proxy.validate(user_mac,user_ip,sid,secret)
     return false
   end
   -- check server db
-  local s = validate_data_on_server(user_ip,user_mac,secret,sid)
-  if s == false then
+  local user_id = validate_data_on_server(user_ip,user_mac,secret,sid)
+  if user_id == false then
     return false
-  end
+  end.
   local params = {cst.localdb, user_mac, user_ip, sid, secret}
   local path   = table.concat(params,"/")
-  local mkdir  = fs.mkdirr(path .. "/auth")
+  local mkdir  = fs.mkdirr(path .. "/" .. user_id)
   if mkdir == true then
     local cmd_auth = "/usr/sbin/iptables -t nat -I PREROUTING -p udp -s " ..user_ip ..                         
     " -m mac --mac-source " .. user_mac .. " --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
@@ -139,8 +139,9 @@ function validate_data_on_server(user_ip,user_mac,secret,sid)
   local server_response = io.popen(cmd):read("*a")
   local response        = json.parse(server_response)
   local r               = response.authenticated
+  local user_id 	= response.user_id
   if r == true then
-    return true
+    return user_id
   end
   return false
 end
