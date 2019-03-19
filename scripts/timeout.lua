@@ -11,13 +11,10 @@ for line in dhcp_leases:lines() do
   local ip  = io.popen("/bin/echo " .. line .. " | awk '{print $3}'"):read("*l")
   local status = portal_proxy.status_user(ip,mac)
   if status == "Authenticated" then
-    local cmd = "ls /var/localdb/" .. mac .. "/" .. ip
-    local sid = io.popen(cmd):read("*l")
-    local cmd = cmd .. "/" .. sid
-    local secret = io.popen(cmd):read("*l")
-    local cmd = cmd .. "/" .. secret
-    local user_id = io.popen(cmd):read("*l")
-    local cmd = "/bin/date -r /var/localdb/" .. mac .. "/".. ip .. "/" .. sid .. "/" .. secret .. "/" .. user_id .. "+%s"
+    local cmd = "/usr/bin/find /var/localdb/%s/%s -name '*' -type d -mindepth 3"
+    local cmd = string.format(cmd)
+    local path = io.popen(cmd):read("*l")
+    local cmd = "/bin/date " .. path .. " +%s"
     local date_auth = io.popen(cmd):read("*l")
     date_auth = tonumber(date_auth)
     local date_now = io.popen("date +%s"):read("*l")
