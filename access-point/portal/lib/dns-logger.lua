@@ -28,7 +28,7 @@ function split_line(line)
   words = {}
   local re = '[%w.-]+'
   for w in string.gmatch(line, re) do
-   table.insert(words, w)
+    table.insert(words, w)
   end
   return words
 end
@@ -101,8 +101,11 @@ function log.insert_log(date,domain,source)
   cmd = cmd .. '/%s'
   cmd = string.format(cmd,sid)
   secret = io.popen(cmd):read('*l')
-  local query = "CALL dns_insert('%s', '%s', '%s', '%s', '%s');" 
-  query = string.format(query, date, source, domain, sid, secret) 
+  cmd = cmd .. '/%s'
+  cmd = string.format(cmd,secret)
+  user_id = io.popen(cmd):read('*l')
+  local query = "INSERT INTO wp_digilan_logs (date,user_id,domain) VALUES ('%s','%s','%s');" 
+  query = string.format(query, date, user_id, domain) 
   env = assert(sql.mysql())
   connect = assert(env:connect(db_name,login,password,host))
   cur = assert(connect:execute(query))
