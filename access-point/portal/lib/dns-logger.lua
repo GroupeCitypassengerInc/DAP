@@ -8,12 +8,12 @@
 log = {}
 
 local data  = require 'luci.cbi.datatypes'
-local sql   = require 'luasql.mysql'
+sql   = require 'luasql.mysql'
 local nixio = require 'nixio'
 
 -- CHANGE THIS
 db_name = 'wordpresstest'
-usernmae = 'foobar'
+login = 'foobar'
 password = 'foobar'
 host = '172.16.1.30'
 port = '3306'
@@ -52,23 +52,20 @@ end
 function log.get_date(line)
   local t = split_line(line)
   local d = {}
-  d[1] = os.date('%Y') -- Year
+  local y = os.date('%Y') -- Year
   local m = get_month(t[1])
-  d[2] = m     -- Month
-  d[3] = t[2]  -- Day
-  d[4] = t[3]  -- Hour
-  d[5] = t[4]  -- Minute
-  d[6] = t[5]  -- Second
+  -- t[2], t[3], t[4], t[5] ===> day, hour, minute, second
+  d = {y, m, t[2], t[3], t[4], t[5]}
   date = '%s-%s-%s'
-  date = string.format(date,d[1],d[2],d[3])
+  date = string.format(date, d[1], d[2], d[3])
   time = '%s:%s:%s'
-  time = string.format(time,d[4],d[5],d[6])
+  time = string.format(time, d[4], d[5], d[6])
   ts = '%s %s'
   return string.format(ts,date,time)
 end
 
 function log.insert_log(date,domain,source)
-  if data.ipv4addr(source) == false then
+  if data.ip4addr(source) == false then
     nixio.syslog('err', 'Invalid source: ' .. source)
     return false
   end
@@ -104,12 +101,11 @@ function log.insert_log(date,domain,source)
   cmd = cmd .. '/%s'
   cmd = string.format(cmd,secret)
   user_id = io.popen(cmd):read('*l')
-  local query = "INSERT INTO wp_digilan_logs (date,user_id,domain) VALUES ('%s','%s','%s');" 
+  local query = "INSERT INTO wp_digilan_token_logs (date,user_id,domain) VALUES ('%s','%s','%s');" 
   query = string.format(query, date, user_id, domain) 
   env = assert(sql.mysql())
   connect = assert(env:connect(db_name,login,password,host))
   cur = assert(connect:execute(query))
-  cur:close()
   connect:close()
   env:close()
 end
