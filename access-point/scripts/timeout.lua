@@ -15,7 +15,9 @@ for line in dhcp_leases:lines() do
     local sid = io.popen(cmd):read("*l")
     local cmd = cmd .. "/" .. sid
     local secret = io.popen(cmd):read("*l")
-    local cmd = "date -r /var/localdb/" .. mac .. "/".. ip .. "/" .. sid .. "/" .. secret .. "/auth +%s"
+    local cmd = cmd .. "/" .. secret
+    local user_id = io.popen(cmd):read("*l")
+    local cmd = "/bin/date -r /var/localdb/" .. mac .. "/".. ip .. "/" .. sid .. "/" .. secret .. "/" .. user_id .. "+%s"
     local date_auth = io.popen(cmd):read("*l")
     date_auth = tonumber(date_auth)
     local date_now = io.popen("date +%s"):read("*l")
