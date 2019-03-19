@@ -109,7 +109,7 @@ function proxy.validate(user_mac,user_ip,sid,secret)
   local user_id = validate_data_on_server(user_ip,user_mac,secret,sid)
   if user_id == false then
     return false
-  end.
+  end
   local params = {cst.localdb, user_mac, user_ip, sid, secret}
   local path   = table.concat(params,"/")
   local mkdir  = fs.mkdirr(path .. "/" .. user_id)
