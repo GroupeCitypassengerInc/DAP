@@ -9,9 +9,9 @@
 package_path = package_path .. ';/portal/lib/?.lua'
 log = require 'dns-logger'
 
-local in = io.popen('/bin/cat /tmp/bar','r')
+local fifo = io.popen('/bin/cat /tmp/dns.log','r')
 
-for line in in:lines() do
+for line in fifo:lines() do
   if log.is_dns_query(line) == true then
     local date = log.get_date(line)
     local src = log.get_source_ip(line)
