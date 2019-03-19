@@ -6,7 +6,7 @@
 --                                       
 ]]-- 
 
-package_path = package_path .. ';/portal/lib/?.lua'
+package.path = package.path .. ';/portal/lib/?.lua'
 log = require 'dns-logger'
 
 local fifo = io.popen('/bin/cat /tmp/dns.log','r')
