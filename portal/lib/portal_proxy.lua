@@ -32,13 +32,6 @@ function proxy.no_dhcp_lease()
   uhttpd.send("No dhcp lease.")
 end
 
-function proxy.redirect_443_to_511_when_not_authenticated()
-  uhttpd.send("Status: 511 Network Authentication Required.\r\n")
-  uhttpd.send("Content-Type: text/html\r\n")
-  uhttpd.send("\r\n\r\n")
-  uhttpd.send("Not authenticated.")
-end
-
 function proxy.initialize_redirected_client(user_ip,user_mac)
   -- Send a request to server
   local ap_secret = cst.ap_secret
@@ -174,7 +167,7 @@ function proxy.status_user(user_ip,user_mac)
   if sid_db == nil then
     return "Lease. Not in localdb"
   end
-  local cmd_secret = "ls " .. select_db .."/" .. sid_db 
+  local cmd_secret = "/bin/ls " .. select_db .."/" .. sid_db 
   local secret_db  = io.popen(cmd_secret):read("*l")
   user_mac         = string.upper(user_mac)
   local cmd = "/usr/sbin/iptables-save | /bin/grep ".. user_ip .. " | /bin/grep " .. user_mac .. " > /dev/null"
