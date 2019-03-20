@@ -8,19 +8,20 @@
 log = {}
 
 local data  = require 'luci.cbi.datatypes'
-sql   = require 'luasql.mysql'
+sql         = require 'luasql.mysql'
 local nixio = require 'nixio'
+local cst   = require 'proxy_constants'
 
 -- CHANGE THIS
-db_name = 'wordpresstest'
-login = 'foobar'
-password = 'foobar'
-host = '172.16.1.30'
-port = '3306'
+db_name = cst.db_name
+login = cst.username
+password = cst.password
+host = cst.host
+port = cst.port
 
 function log.is_dns_query(line)
   local re = 'query%[A%]'
-  s = string.match(line,re)
+  s = string.match(line, re)
   return s == 'query[A]'
 end
 
@@ -61,16 +62,16 @@ function log.get_date(line)
   time = '%s:%s:%s'
   time = string.format(time, d[4], d[5], d[6])
   ts = '%s %s'
-  return string.format(ts,date,time)
+  return string.format(ts, date, time)
 end
 
-function log.insert_log(date,domain,source)
+function log.insert_log(date, domain, source)
   if data.ip4addr(source) == false then
     nixio.syslog('err', 'Invalid source: ' .. source)
     return false
   end
   local re = '[%w.-]+'
-  if string.match(domain,re) ~= domain then
+  if string.match(domain, re) ~= domain then
     nixio.syslog('err', 'Invalid domain: ' .. domain)
     return false
   end
@@ -79,32 +80,32 @@ function log.insert_log(date,domain,source)
     return false
   end
   local re = '%d%d%d%d%-%d%d%-%d%d% %d%d%:%d%d%:%d%d'
-  local s = string.find(date,re)
+  local s = string.find(date, re)
   if s == nil then
     nixio.syslog('err', 'Invalid date format:' .. date)
     return false
   end
-  if string.sub(date,s) ~= date then
+  if string.sub(date, s) ~= date then
     nixio.syslog('err', 'Date not matched, got: ' .. date)
     return false
   end
   -- Get session id and secret to find user_id for this connection in WP tables.
   local cmd = '/usr/bin/find /var/localdb -name %s -type d'
-  cmd = string.format(cmd,source)
+  cmd = string.format(cmd, source)
   local dir = io.popen(cmd):read('*l')
   local cmd = '/bin/ls %s'
-  cmd = string.format(cmd,dir)
+  cmd = string.format(cmd, dir)
   local sid = io.popen(cmd):read('*l')
   cmd = cmd .. '/%s'
-  cmd = string.format(cmd,sid)
+  cmd = string.format(cmd, sid)
   secret = io.popen(cmd):read('*l')
   cmd = cmd .. '/%s'
-  cmd = string.format(cmd,secret)
+  cmd = string.format(cmd, secret)
   user_id = io.popen(cmd):read('*l')
   local query = "INSERT INTO wp_digilan_token_logs (date,user_id,domain) VALUES ('%s','%s','%s');" 
   query = string.format(query, date, user_id, domain) 
   env = assert(sql.mysql())
-  connect = assert(env:connect(db_name,login,password,host))
+  connect = assert(env:connect(db_name, login, password, host, port))
   cur = assert(connect:execute(query))
   connect:close()
   env:close()
