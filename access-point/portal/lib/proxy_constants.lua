@@ -16,6 +16,11 @@ function constants.__init__()
   constants.ap_timeout = tonumber(ini_conf_data.ap.timeout)
   constants.localdb    = ini_conf_data.localdb.path
   constants.ap_secret  = ini_conf_data.ap.secret
+  constants.db_name    = ini_conf_data.wpdb.db_name
+  constants.username   = ini_conf_data.wpdb.username
+  constants.password   = ini_conf_data.wpdb.password
+  constants.host       = ini_conf_data.wpdb.host
+  constants.port       = ini_conf_data.wpdb.port
 end
 
 constants.__init__()
