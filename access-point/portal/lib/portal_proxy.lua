@@ -106,19 +106,17 @@ function proxy.validate(user_mac,user_ip,sid,secret)
   local params = {cst.localdb, user_mac, user_ip, sid, secret}
   local path   = table.concat(params,"/")
   local mkdir  = fs.mkdirr(path .. "/" .. user_id)
-  if mkdir == true then
-    local cmd_auth = "/usr/sbin/iptables -t nat -I PREROUTING -p udp -s " ..user_ip ..                         
-    " -m mac --mac-source " .. user_mac .. " --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
-    local a = os.execute(cmd_auth)
-    if a ~= 0 then
-      nixio.syslog('err', cmd_auth .. ' failed with exit code: ' .. a)
-      return false
-    end
-    return true
-  else
+  if mkdir == false then 
     local errno = nixio.errno()
     local errmsg = nixio.strerror(errno)
     nixio.syslog("err", errno .. ": " .. errmsg)
+    return false
+  end
+  local cmd_auth = "/usr/sbin/iptables -t nat -I PREROUTING -p udp -s " ..user_ip ..                         
+  " -m mac --mac-source " .. user_mac .. " --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
+  local a = os.execute(cmd_auth)
+  if a ~= 0 then
+    nixio.syslog('err', cmd_auth .. ' failed with exit code: ' .. a)
     return false
   end
   return true
