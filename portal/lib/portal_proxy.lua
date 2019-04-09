@@ -22,7 +22,11 @@ function redirect(url)
 end
 
 function proxy.success()
-  redirect(cst.PortalUrl .. "/")
+  if cst.landing_page == nil then 
+    redirect(cst.PortalUrl .. "/")
+  else
+    redirect(cst.landing_page)
+  end
 end
 
 function proxy.no_dhcp_lease()
@@ -39,7 +43,6 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
   '/index.php?digilan-token-action=create&user_ip=' .. 
   user_ip ..'&ap_mac=' .. cst.ap_mac .. 
   '&digilan-token-secret=' .. ap_secret .. '"'
-  print(cmd)
   -- server responds with secret and sid
   local server_response = io.popen(cmd):read("*a")
   local response        = json.parse(server_response)
@@ -124,15 +127,13 @@ end
 
 function validate_data_on_server(user_ip,user_mac,secret,sid)
   local ap_secret = cst.ap_secret
-  local cmd  = CURL ..'"' ..  cst.PortalUrl .. '/index.php?digilan-token-action=validate&user_ip='
+  local cmd = CURL ..'"' ..  cst.PortalUrl .. '/index.php?digilan-token-action=validate&user_ip='
   .. user_ip .. '&ap_mac='.. cst.ap_mac ..
   '&secret=' .. secret .. '&session_id=' .. sid ..'&digilan-token-secret=' .. ap_secret.. '"'
   local server_response = io.popen(cmd):read("*a")
   local response        = json.parse(server_response)
-  local r               = response.authenticated
-  local user_id 	= response.user_id
-  if r == true then
-    return user_id
+  if response.authenticated then
+    return response.user_id
   end
   return false
 end

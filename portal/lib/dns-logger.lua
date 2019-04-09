@@ -12,7 +12,6 @@ sql         = require 'luasql.mysql'
 local nixio = require 'nixio'
 local cst   = require 'proxy_constants'
 
--- CHANGE THIS
 db_name = cst.db_name
 login = cst.username
 password = cst.password
@@ -56,7 +55,13 @@ function log.get_date(line)
   local y = os.date('%Y') -- Year
   local m = get_month(t[1])
   -- t[2], t[3], t[4], t[5] ===> day, hour, minute, second
-  d = {y, m, t[2], t[3], t[4], t[5]}
+  day = tonumber(t[2])
+  if day < 10 then
+    day = '0' .. day
+  else
+    day = t[2]
+  end
+  d = {y, m, day, t[3], t[4], t[5]}
   date = '%s-%s-%s'
   date = string.format(date, d[1], d[2], d[3])
   time = '%s:%s:%s'

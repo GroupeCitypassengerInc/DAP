@@ -50,7 +50,7 @@ function handle_request(env)
   if status == "User in localdb" then
     local params    = {cst.localdb,user_mac,user_ip}
     local select_db = table.concat(params,"/")
-    local cmd_sid   = "ls " .. select_db                             
+    local cmd_sid   = "/bin/ls " .. select_db                             
     local sid_db    = io.popen(cmd_sid):read("*l")                   
     local rdrinfo   = "session_id=" .. sid_db .. "&mac=" .. user_mac      
     redirect(cst.PortalUrl .. "/wp-login.php?" .. rdrinfo)
