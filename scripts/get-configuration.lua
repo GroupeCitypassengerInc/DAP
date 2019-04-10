@@ -103,15 +103,15 @@ end
 --
 --]]
 
-hostapd_file = io.open('/etc/hostapd.0.conf')
-current_hostapd_file = hostapd_file:read('*a')
-hostapd_file:close()
-new_hostapd_file = resp['files']['/etc/hostapd.0.conf']
-if current_hostapd_file ~= new_hostapd_file then
-  f = io.open('/etc/hostpad.0.conf')
-  f:write(new_hostapd_file)
-  f:close()
-  reload.hostapd()
+for conf_path,new_hostapd_file in pairs(resp['files']) do
+  local hostapd_file = io.open(conf_path)
+  local current_hostapd_file = hostapd_file:read('*a')
+  if current_hostapd_file ~= new_hostapd_file then
+    local f = io.open(conf_path)
+    f:write(new_hostapd_file)
+    f:close()
+    reload.hostapd()
+  end
 end
 
 
@@ -157,6 +157,7 @@ local cmd = string.format(cmd,url,secret)
 local resp = io.popen(cmd):read('*a')
 
 resp = json.parse(resp)
+
 --- Update timeout
 data = parser.load('/etc/proxy.ini')
 if tonumber(resp['timeout']) == nil then
@@ -167,6 +168,16 @@ if data.ap.timeout ~= resp['timeout'] then
   data.ap.timeout = resp['timeout']
   parser.save('/etc/proxy.ini',data)
 end
+
+--- Updage landing page
+current_landing_page = data.portal.landing_page
+new_landing_page = resp['landing_page']
+if current_landing_page ~= new_landing_page then
+  data.portal.landing_page = new_landing_page
+  parser.save('/etc/proxy.ini',data)
+  reload.uhttpd()
+end
+
 --- Update database credentials
 if data.wpdb.db_name ~= resp['db_name'] then
   data.wpdb.db_name = resp['db_name']
