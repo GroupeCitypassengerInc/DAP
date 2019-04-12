@@ -54,18 +54,17 @@ function log.get_date(line)
   local d = {}
   local y = os.date('%Y') -- Year
   local m = get_month(t[1])
-  -- t[2], t[3], t[4], t[5] ===> day, hour, minute, second
   day = tonumber(t[2])
   if day < 10 then
     day = '0' .. day
   else
     day = t[2]
   end
-  d = {y, m, day, t[3], t[4], t[5]}
+  d = {year=y, month=m, day=day, hour=t[3], minute=t[4], second=t[5]}
   date = '%s-%s-%s'
-  date = string.format(date, d[1], d[2], d[3])
+  date = string.format(date, d.year, d.month, d.day)
   time = '%s:%s:%s'
-  time = string.format(time, d[4], d[5], d[6])
+  time = string.format(time, d.hour, d.minute, d.second)
   ts = '%s %s'
   return string.format(ts, date, time)
 end
