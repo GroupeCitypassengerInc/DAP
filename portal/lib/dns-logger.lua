@@ -109,10 +109,14 @@ function log.insert_log(date, domain, source)
   local query = "INSERT INTO wp_digilan_token_logs (date,user_id,domain) VALUES ('%s','%s','%s');" 
   query = string.format(query, date, user_id, domain) 
   env = assert(sql.mysql())
-  connect = assert(env:connect(db_name, login, password, host, port))
-  cur = assert(connect:execute(query))
-  connect:close()
-  env:close()
+  connect = env:connect(db_name, login, password, host, port)
+  if connect then
+    cur = assert(connect:execute(query))
+    connect:close()
+    env:close()
+  else
+    nixio.syslog('warn','Cannot connect to WordPress database')
+  end
 end
 
 return log
