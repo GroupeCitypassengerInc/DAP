@@ -22,6 +22,7 @@ function constants.__init__()
   constants.host       = ini_conf_data.wpdb.host
   constants.port       = ini_conf_data.wpdb.port
   constants.landing_page = ini_conf_data.portal.landing_page
+  constants.portal_page = ini_conf_data.portal.page
 end
 
 constants.__init__()
