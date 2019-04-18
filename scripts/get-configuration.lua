@@ -35,6 +35,7 @@ local data =
   portal=
   {
     url='',
+    landing_page=''
   },
   wpdb=
   {
@@ -97,12 +98,7 @@ if changed then
   reload.uhttpd()
 end
 
---[[
---
---  UPDATE HOSTAPD CONF FILE
---
---]]
-
+--- UPDATE HOSTAPD CONF FILE
 for conf_path,new_hostapd_file in pairs(resp['files']) do
   local hostapd_file = io.open(conf_path)
   local current_hostapd_file = hostapd_file:read('*a')
@@ -110,10 +106,11 @@ for conf_path,new_hostapd_file in pairs(resp['files']) do
     local f = io.open(conf_path)
     f:write(new_hostapd_file)
     f:close()
-    reload.hostapd()
+    nixio.syslog('info',new_hostapd_file .. ' updated!')
+    reload.hostapd(conf_path)
+    reload.dnsmasq('dnsmasq-dhcp')
   end
 end
-
 
 --[[
 --
@@ -139,16 +136,18 @@ if x == 256 then
   nixio.syslog('info','Updated whitelist.')
 
   -- Restart dnsmasq
-  reload.dnsmasq()
+  reload.dnsmasq('dnsmasq-dhcp')
 elseif x ~= 0 then
   nixio.syslog('err','grep failed. Exit code: ' .. x)
   return false
 end
+
 ------------------------
 --------- GET CONFIG WORDPRESS 
 ------------------------
 
 if url == nil then
+  nixio.syslog('warn','No portal URL')
   return false
 end
 
@@ -175,14 +174,25 @@ new_landing_page = resp['landing_page']
 if current_landing_page ~= new_landing_page then
   data.portal.landing_page = new_landing_page
   parser.save('/etc/proxy.ini',data)
+  nixio.syslog('info','timeout updated')
+  reload.uhttpd()
+end
+
+--- INCLUDE PORTAL PAGE
+local portal_page = data.portal.page
+local new_portal_page = resp['page']
+if portal_page ~= new_portal_page then
+  data.portal.page = new_portal_page
+  parser.save('/etc/proxy.ini',data)
   reload.uhttpd()
 end
 
 --- Update database credentials
-if data.wpdb.db_name ~= resp['db_name'] then
-  data.wpdb.db_name = resp['db_name']
+if url ~= data.portal.url then
+  data.wpdb.db_name     = resp['db_name']
   data.wpdb.db_username = data.portal.url
   data.wpdb.db_password = data.ap.secret
   data.wpdb.db_host     = domain
+  nixio.syslog('info','database credentials updated.')
   parser.save('/etc/proxy.ini',data)
 end
