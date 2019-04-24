@@ -108,7 +108,7 @@ for conf_path,new_hostapd_file in pairs(resp['files']) do
     f:close()
     nixio.syslog('info',new_hostapd_file .. ' updated!')
     reload.hostapd(conf_path)
-    reload.dnsmasq('dnsmasq-dhcp')
+    reload.dnsmasq()
   end
 end
 
