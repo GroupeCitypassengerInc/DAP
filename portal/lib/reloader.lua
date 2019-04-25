@@ -29,20 +29,21 @@ end
 function r.hostapd(path)
   local p = string.gsub(path,'etc','tmp')
   local pid_path = string.gsub(p,'conf','pid')
-  local pid = io.popen(pid_path):read('*l')
-  local kill = '/bin/kill ' .. pid_path
+  local pid = io.popen('/bin/cat ' .. pid_path):read('*l')
+  local kill = '/bin/kill ' .. pid
   local k = os.execute(kill)
   if k ~= 0 then
     nixio.syslog('err','Could not kill hostapd ' .. pid .. '. Exit code: '
     .. k)
   end
-  local cmd = '/sbin/start-stop-daemon -p %s -x /usr/sbin/hostapd -S -- -B -P %s %s'
-  local cmd = string.format(cmd,pid_path,pid_path,path)
+  local cmd = '/usr/sbin/hostapd -B -P %s %s'
+  local cmd = string.format(cmd,pid_path,path)
   local h = os.execute(cmd)
   if h ~= 0 then
     nixio.syslog('err',cmd .. ' failed. Exit code: '
     .. h)
   end
+
   local cmd = '/sbin/ifconfig bridge1 up'
   local s = os.execute(cmd)
   if s ~= 0 then
