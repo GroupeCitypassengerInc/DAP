@@ -59,7 +59,6 @@ else
   resp = json.parse(resp)
 end
 
-changed = false
 url = nil
 
 if resp == nil then
@@ -77,38 +76,37 @@ else
     if current_url == url and current_secret == secret then
       nixio.syslog('info','Nothing to update.')
     else
-      changed = true
       data.ap.secret=secret
       data.portal.url=url
       parser.save('/etc/proxy.ini',data)
       nixio.syslog('info','Configuration saved.')
+      reload.uhttpd()
     end
   else
-    changed = true
     nixio.syslog('info','No proxy.ini file found. Creating a new one.')
     data.ap.secret=secret
     data.portal.url=url
     parser.save('/etc/proxy.ini',data)
     nixio.syslog('info','Configuration saved.')
+    reload.uhttpd()
   end
 end
 
--- Restart uhttpd
-if changed then
-  reload.uhttpd()
-end
-
 --- UPDATE HOSTAPD CONF FILE
-for conf_path,new_hostapd_file in pairs(resp['files']) do
+hostapd_list = resp['files']
+for conf_path,new_hostapd_file in pairs(hostapd_list) do
   local hostapd_file = io.open(conf_path)
   local current_hostapd_file = hostapd_file:read('*a')
+  hostapd_file:close()
   if current_hostapd_file ~= new_hostapd_file then
-    local f = io.open(conf_path)
+    local f = io.open(conf_path,'w')
     f:write(new_hostapd_file)
     f:close()
-    nixio.syslog('info',new_hostapd_file .. ' updated!')
+    nixio.syslog('info',conf_path .. ' updated!')
     reload.hostapd(conf_path)
     reload.dnsmasq()
+  else
+    nixio.syslog('info','No changes in ' .. conf_path)
   end
 end
 
@@ -136,7 +134,7 @@ if x == 256 then
   nixio.syslog('info','Updated whitelist.')
 
   -- Restart dnsmasq
-  reload.dnsmasq('dnsmasq-dhcp')
+  reload.dnsmasq()
 elseif x ~= 0 then
   nixio.syslog('err','grep failed. Exit code: ' .. x)
   return false
@@ -157,8 +155,8 @@ local resp = io.popen(cmd):read('*a')
 
 resp = json.parse(resp)
 
---- Update timeout
 data = parser.load('/etc/proxy.ini')
+--- Update timeout
 if tonumber(resp['timeout']) == nil then
   nixio.syslog('err',resp['timeout'] .. ' is not a number.')
   return false
