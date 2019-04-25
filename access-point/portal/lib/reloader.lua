@@ -62,7 +62,7 @@ function r.hostapd(path)
     nixio.syslog('err', cmd .. ' failed. Exit code: '
     .. s)
   end
-  local cmd = '/sbin/ifconfig bridge2 192.168.1.100'
+  local cmd = '/sbin/ifconfig bridge2 192.168.100.1'
   local s = os.execute(cmd)
   if s ~= 0 then
     nixio.syslog('err', cmd .. ' failed. Exit code: '
