@@ -36,6 +36,7 @@ local data =
   {
     url='',
     landing_page=''
+    portal_page=''
   },
   wpdb=
   {
@@ -94,8 +95,8 @@ end
 
 --- UPDATE HOSTAPD CONF FILE
 local hostapds = resp['files']
-local f = io.open('/etc/hostapd.0.conf')         
-local now0 = f:read('*a')                                                                
+local f = io.open('/etc/hostapd.0.conf')
+local now0 = f:read('*a')
 f:close()
 local f = io.open('/etc/hostapd.1.conf')
 local now1 = f:read('*a')
@@ -103,23 +104,23 @@ f:close()
 local x = hostapds['/etc/hostapd.0.conf'] == now0
 local y = hostapds['/etc/hostapd.1.conf'] == now1
 if x and y then
-  nixio.syslog('info','no changes')   
-else                                    
+  nixio.syslog('info','no changes')
+else
   local kill = '/usr/bin/killall hostapd'
-  local k = os.execute(kill)                       
-  if k ~= 0 then     
-    nixio.syslog('info','no hostapd killed')                    
-  end                                    
+  local k = os.execute(kill)
+  if k ~= 0 then
+    nixio.syslog('info','no hostapd killed')
+  end
   -- wait for killall to have killed all hostapd processes
-  os.execute('sleep 1')                  
+  os.execute('sleep 1')
   for path,conf in pairs(hostapds) do
     local f = io.open(path,'w')
-    f:write(conf)                                         
-    f:close()          
-    reload.hostapd(path)                                  
-  end                          
-  reload.bridge()                         
-  reload.dnsmasq()             
+    f:write(conf)
+    f:close()
+    reload.hostapd(path)
+  end
+  reload.bridge()
+  reload.dnsmasq() 
 end
 
 --[[
@@ -190,7 +191,7 @@ end
 
 --- INCLUDE PORTAL PAGE
 local portal_page = data.portal.page
-local new_portal_page = resp['page']
+local new_portal_page = resp['portal_page']
 if portal_page ~= new_portal_page then
   data.portal.page = new_portal_page
   parser.save('/etc/proxy.ini',data)
