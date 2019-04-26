@@ -7,13 +7,19 @@ sleep 5
 /etc/init.d/dnsmasq stop
 mkdir /var/localdb
 sleep 5
-start-stop-daemon -p /tmp/hostapd.0.pid -x hostapd -S -- -B -P /tmp/hostapd.0.pid /etc/hostapd.solo.conf
+start-stop-daemon -p /tmp/hostapd.0.pid -x hostapd -S -- -B -P /tmp/hostapd.0.pid /etc/hostapd.0.conf
+sleep 5
+start-stop-daemon -p /tmp/hostapd.1.pid -x hostapd -S -- -B -P /tmp/hostapd.1.pid /etc/hostapd.1.conf
+sleep 5
 ifconfig bridge1 up
 ifconfig bridge1 192.168.1.1
+mkfifo /tmp/dns.log
 sleep 5
 dnsmasq --conf-file=/etc/dnsmasq-dhcp.conf --guard-ip=192.168.1.1
 sleep 5
-dnsmasq --conf-file=/etc/dnsmasq.portal
+dnsmasq --conf-file=/etc/dnsmasq.portal &
+sleep 5
+lua /scripts/logger.lua &
 sleep 5
 ip_wan=$(ifconfig eth0.1 | grep 'inet addr' | cut -d: -f2 | awk '{print $1}')
 uci set uhttpd.main.listen_http=$ip_wan:80
@@ -26,3 +32,4 @@ sleep 10
 ## ----- END USER:FOOTER -----
 
 exit 0
+
