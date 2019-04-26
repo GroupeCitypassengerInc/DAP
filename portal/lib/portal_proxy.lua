@@ -92,7 +92,7 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
 
   -- return a 302
   local rdrinfo = "session_id=" .. sid .. "&mac=" .. user_mac 
-  redirect(cst.PortalUrl .. "/wp-login.php?" .. rdrinfo)
+  redirect(cst.PortalUrl .. "/" .. cst.PortalPage .. rdrinfo)
   return {sid,secret}
 end
 
