@@ -93,21 +93,33 @@ else
 end
 
 --- UPDATE HOSTAPD CONF FILE
-hostapd_list = resp['files']
-for conf_path,new_hostapd_file in pairs(hostapd_list) do
-  local hostapd_file = io.open(conf_path)
-  local current_hostapd_file = hostapd_file:read('*a')
-  hostapd_file:close()
-  if current_hostapd_file ~= new_hostapd_file then
-    local f = io.open(conf_path,'w')
-    f:write(new_hostapd_file)
-    f:close()
-    nixio.syslog('info',conf_path .. ' updated!')
-    reload.hostapd(conf_path)
-    reload.dnsmasq()
-  else
-    nixio.syslog('info','No changes in ' .. conf_path)
-  end
+local hostapds = resp['files']
+local f = io.open('/etc/hostapd.0.conf')         
+local now0 = f:read('*a')                                                                
+f:close()
+local f = io.open('/etc/hostapd.1.conf')
+local now1 = f:read('*a')
+f:close()
+local x = hostapds['/etc/hostapd.0.conf'] == now0
+local y = hostapds['/etc/hostapd.1.conf'] == now1
+if x and y then
+  nixio.syslog('info','no changes')   
+else                                    
+  local kill = '/usr/bin/killall hostapd'
+  local k = os.execute(kill)                       
+  if k ~= 0 then     
+    nixio.syslog('info','no hostapd killed')                    
+  end                                    
+  -- wait for killall to have killed all hostapd processes
+  os.execute('sleep 1')                  
+  for path,conf in pairs(hostapds) do
+    local f = io.open(path,'w')
+    f:write(conf)                                         
+    f:close()          
+    reload.hostapd(path)                                  
+  end                          
+  reload.bridge()                         
+  reload.dnsmasq()             
 end
 
 --[[
