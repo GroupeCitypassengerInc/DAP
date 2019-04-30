@@ -168,6 +168,7 @@ local resp = io.popen(cmd):read('*a')
 
 resp = json.parse(resp)
 
+-- Update timeout
 data = parser.load('/etc/proxy.ini')
 --- Update timeout
 if tonumber(resp['timeout']) == nil then
@@ -177,9 +178,11 @@ end
 if data.ap.timeout ~= resp['timeout'] then
   data.ap.timeout = resp['timeout']
   parser.save('/etc/proxy.ini',data)
+else
+  nixio.syslog('info','timeout is up to date')
 end
 
---- Updage landing page
+--- Update landing page
 current_landing_page = data.portal.landing_page
 new_landing_page = resp['landing_page']
 if current_landing_page ~= new_landing_page then
@@ -187,6 +190,8 @@ if current_landing_page ~= new_landing_page then
   parser.save('/etc/proxy.ini',data)
   nixio.syslog('info','timeout updated')
   reload.uhttpd()
+else
+  nixio.syslog('info','landing page is up to date')
 end
 
 --- INCLUDE PORTAL PAGE
@@ -196,6 +201,8 @@ if portal_page ~= new_portal_page then
   data.portal.page = new_portal_page
   parser.save('/etc/proxy.ini',data)
   reload.uhttpd()
+else
+  nixio.syslog('info','portal page is up to date')
 end
 
 --- Update database credentials
@@ -206,4 +213,6 @@ if url ~= data.portal.url then
   data.wpdb.db_host     = domain
   nixio.syslog('info','database credentials updated.')
   parser.save('/etc/proxy.ini',data)
+else
+  nixio.syslog('info','db credentials are up to date')
 end
