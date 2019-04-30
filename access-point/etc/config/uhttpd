@@ -14,7 +14,7 @@ config uhttpd 'main'
 	option tcp_keepalive '1'
 
 config uhttpd 'portal'
-	list listen_http '192.168.1.1:80'
+	list listen_http '10.168.168.1:80'
 	option home '/portal'
 	option lua_prefix '/'
 	option lua_handler '/portal/index.lua'
