@@ -14,7 +14,7 @@ function r.dnsmasq()
     end
   end
   local DNSMASQ = '/usr/sbin/dnsmasq --conf-file='
-  local dnsmasq = DNSMASQ .. '/etc/dnsmasq-dhcp.conf --guard-ip=192.168.1.1'
+  local dnsmasq = DNSMASQ .. '/etc/dnsmasq-dhcp.conf --guard-ip=10.168.168.1'
   local x = os.execute(dnsmasq)
   if x ~= 0 then
     nixio.syslog('err','Could not start ' .. dnsmasq  .. '. Exit code: '
@@ -34,7 +34,7 @@ function r.bridge()
     nixio.syslog('err', cmd .. ' failed. Exit code: '                       
     .. s)                                                                 
   end                                                                     
-  local cmd = '/sbin/ifconfig bridge1 192.168.1.1'                        
+  local cmd = '/sbin/ifconfig bridge1 10.168.168.1'                        
   local s = os.execute(cmd)                                               
   if s ~= 0 then                                                          
     nixio.syslog('err', cmd .. ' failed. Exit code: '                     
