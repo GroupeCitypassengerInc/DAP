@@ -53,8 +53,8 @@ resp = nil
 if api_key == nil then
   resp = nil
 else
-  local cmd  = '/usr/bin/curl -H "CityscopeApiKey: %s"
-  -H "accept: application/json" "https://preprod.citypassenger.com/ws/DAP/%s"'
+  local cmd  = '/usr/bin/curl -H "CityscopeApiKey: %s" ' .. 
+  '-H "accept: application/json" "https://preprod.citypassenger.com/ws/DAP/%s"'
   local cmd = string.format(cmd,api_key,mac)
   resp = io.popen(cmd):read('*a')
   resp = json.parse(resp)
