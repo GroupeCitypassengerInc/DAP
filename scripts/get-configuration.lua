@@ -129,7 +129,10 @@ end
 --
 --]]
 
--- Converts portal URL to domain
+if url == nil then
+  nixio.syslog('warn','No portal URL')
+  return false
+end
 domain = url:match('^%w+://([^/]+)')
 
 
@@ -157,10 +160,6 @@ end
 --------- GET CONFIG WORDPRESS 
 ------------------------
 
-if url == nil then
-  nixio.syslog('warn','No portal URL')
-  return false
-end
 
 local cmd = '/usr/bin/curl "%s/index.php?digilan-token-action=configure&digilan-token-secret=%s"'
 local cmd = string.format(cmd,url,secret)
