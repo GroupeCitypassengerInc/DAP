@@ -203,15 +203,3 @@ if portal_page ~= new_portal_page then
 else
   nixio.syslog('info','portal page is up to date')
 end
-
---- Update database credentials
-if url ~= data.portal.url then
-  data.wpdb.db_name     = resp['db_name']
-  data.wpdb.db_username = data.portal.url
-  data.wpdb.db_password = data.ap.secret
-  data.wpdb.db_host     = domain
-  nixio.syslog('info','database credentials updated.')
-  parser.save('/etc/proxy.ini',data)
-else
-  nixio.syslog('info','db credentials are up to date')
-end

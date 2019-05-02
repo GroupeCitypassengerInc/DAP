@@ -8,15 +8,8 @@
 log = {}
 
 local data  = require 'luci.cbi.datatypes'
-sql         = require 'luasql.mysql'
 local nixio = require 'nixio'
 local cst   = require 'proxy_constants'
-
-db_name = cst.db_name
-login = cst.username
-password = cst.password
-host = cst.host
-port = cst.port
 
 function log.is_dns_query(line)
   local re = 'query%[A%]'
@@ -106,17 +99,12 @@ function log.insert_log(date, domain, source)
   cmd = cmd .. '/%s'
   cmd = string.format(cmd, secret)
   user_id = io.popen(cmd):read('*l')
-  local query = "INSERT INTO wp_digilan_token_logs (date,user_id,domain) VALUES ('%s','%s','%s');" 
-  query = string.format(query, date, user_id, domain) 
-  env = assert(sql.mysql())
-  connect = env:connect(db_name, login, password, host, port)
-  if connect then
-    cur = assert(connect:execute(query))
-    connect:close()
-    env:close()
-  else
-    nixio.syslog('warn','Cannot connect to WordPress database')
-  end
+  local row = '{\\"date\\": \\"%s\\", \\"user_id\\": \\"%s\\", \\"domain\\": \\"%s\\"}'
+  local row = string.format(row,date,domain,user_id)
+  f = io.open('/tmp/dns.data')
+  io.output(f)
+  io.write(row)
+  io.close(f)
 end
 
 return log
