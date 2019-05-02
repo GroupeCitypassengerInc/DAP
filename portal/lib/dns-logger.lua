@@ -100,10 +100,10 @@ function log.insert_log(date, domain, source)
   cmd = string.format(cmd, secret)
   user_id = io.popen(cmd):read('*l')
   local row = '{\\"date\\": \\"%s\\", \\"user_id\\": \\"%s\\", \\"domain\\": \\"%s\\"}'
-  local row = string.format(row,date,domain,user_id)
-  f = io.open('/tmp/dns.data')
+  local row = string.format(row,date,user_id,domain)
+  f = io.open('/tmp/dns.data','a')
   io.output(f)
-  io.write(row)
+  io.write(row,'\n')
   io.close(f)
 end
 
