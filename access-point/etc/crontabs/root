@@ -1,1 +1,2 @@
 * * * * * ../scripts/timeout.lua
+*/5 * * * * lua /scripts/post-log.lua
