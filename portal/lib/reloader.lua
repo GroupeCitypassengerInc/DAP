@@ -22,24 +22,42 @@ function r.dnsmasq()
   end
 end
 
+function r.dnsmasq_portal()
+  local cmd = '/usr/sbin/dnsmasq --conf-file=/etc/dnsmasq.portal&'
+  local x = os.execute(cmd)
+  if x ~= 0 then
+    nixio.syslog('err','Could not start ' .. cmd  .. '. Exit code: '
+    .. x)
+  end
+end
+
+function r.logger()
+  local cmd = '/usr/bin/lua /scripts/logger.lua&'
+  local x = os.execute(cmd)
+  if x ~= 0 then                                                                                                                                         
+    nixio.syslog('err','Could not start ' .. cmd  .. '. Exit code: '                                                                                     
+    .. x)                                                                                                                                                
+  end  
+end
+
 function r.uhttpd()
   local cmd = '/etc/init.d/uhttpd restart'
   os.execute(cmd)
 end
 
 function r.bridge()
-  local cmd = '/sbin/ifconfig bridge1 up'                                   
-  local s = os.execute(cmd)                                                 
-  if s ~= 0 then                                                            
-    nixio.syslog('err', cmd .. ' failed. Exit code: '                       
-    .. s)                                                                 
-  end                                                                     
-  local cmd = '/sbin/ifconfig bridge1 10.168.168.1'                        
-  local s = os.execute(cmd)                                               
-  if s ~= 0 then                                                          
-    nixio.syslog('err', cmd .. ' failed. Exit code: '                     
-    .. s)                                                                 
-  end  
+  local cmd = '/sbin/ifconfig bridge1 up'
+  local s = os.execute(cmd)
+  if s ~= 0 then
+    nixio.syslog('err', cmd .. ' failed. Exit code: '
+    .. s)
+  end
+  local cmd = '/sbin/ifconfig bridge1 10.168.168.1'
+  local s = os.execute(cmd)
+  if s ~= 0 then
+    nixio.syslog('err', cmd .. ' failed. Exit code: '
+    .. s)
+  end
 end
 
 function r.hostapd(path)

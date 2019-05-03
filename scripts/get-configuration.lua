@@ -35,8 +35,8 @@ local data =
   portal=
   {
     url='',
-    landing_page=''
-    portal_page=''
+    landing_page='',
+    page=''
   }
 }
 
@@ -96,6 +96,23 @@ f:close()
 local x = hostapds['/etc/hostapd.0.conf'] == now0
 local y = hostapds['/etc/hostapd.1.conf'] == now1
 if x and y then
+  local p = '/usr/bin/test -e /tmp/hostapd.0.pid'
+  local q = '/usr/bin/test -e /tmp/hostapd.1.pid'
+  local exit_code = os.execute(p .. ' && ' .. q)
+  if exit_code ~= 0 then
+    local kill = '/usr/bin/killall hostapd'                                      
+    local k = os.execute(kill)                                                   
+    if k ~= 0 then                                                               
+      nixio.syslog('info','no hostapd killed')                                   
+    end
+    os.execute('sleep 1')
+    reload.hostapd('/etc/hostapd.0.conf')
+    reload.hostapd('/etc/hostapd.1.conf')
+    reload.bridge()
+    reload.dnsmasq()
+    reload.dnsmasq_portal()
+    reload.logger()
+  end
   nixio.syslog('info','no changes')
 else
   local kill = '/usr/bin/killall hostapd'
@@ -112,7 +129,13 @@ else
     reload.hostapd(path)
   end
   reload.bridge()
-  reload.dnsmasq() 
+  reload.dnsmasq()
+  local cmd = '/usr/bin/test -e /tmp/dnsmasq-portal.pid'
+  local x = os.execute(cmd)
+  if x ~= 0 then
+    reload.dnsmasq_portal()
+    reload.logger()
+  end
 end
 
 --[[
@@ -179,7 +202,7 @@ new_landing_page = resp['landing_page']
 if current_landing_page ~= new_landing_page then
   data.portal.landing_page = new_landing_page
   parser.save('/etc/proxy.ini',data)
-  nixio.syslog('info','timeout updated')
+  nixio.syslog('info','landing page updated')
   reload.uhttpd()
 else
   nixio.syslog('info','landing page is up to date')
