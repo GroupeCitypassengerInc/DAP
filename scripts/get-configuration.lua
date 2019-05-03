@@ -37,14 +37,6 @@ local data =
     url='',
     landing_page=''
     portal_page=''
-  },
-  wpdb=
-  {
-    db_name='',
-    db_username='',
-    db_password='',
-    db_host='',
-    db_port='3306'
   }
 }
 
