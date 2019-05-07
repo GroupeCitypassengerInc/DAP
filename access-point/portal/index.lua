@@ -53,7 +53,7 @@ function handle_request(env)
     local cmd_sid   = "/bin/ls " .. select_db                             
     local sid_db    = io.popen(cmd_sid):read("*l")                   
     local rdrinfo   = "session_id=" .. sid_db .. "&mac=" .. user_mac      
-    redirect(cst.PortalUrl .. "/" .. cst.PortalPage .. rdrinfo)
+    redirect(cst.PortalPage .. "?" .. rdrinfo)
     return true                                                                               
   end
 
