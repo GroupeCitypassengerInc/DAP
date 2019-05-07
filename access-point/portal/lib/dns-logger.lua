@@ -9,11 +9,10 @@ log = {}
 
 local data  = require 'luci.cbi.datatypes'
 local nixio = require 'nixio'
-local cst   = require 'proxy_constants'
 
 function log.is_dns_query(line)
   local re = 'query%[A%]'
-  s = string.match(line, re)
+  s = string.match(line,re)
   return s == 'query[A]'
 end
 
@@ -47,28 +46,29 @@ function log.get_date(line)
   local d = {}
   local y = os.date('%Y') -- Year
   local m = get_month(t[1])
+  -- t[2], t[3], t[4], t[5] ===> day, hour, minute, second
   day = tonumber(t[2])
   if day < 10 then
     day = '0' .. day
   else
     day = t[2]
-  end
-  d = {year=y, month=m, day=day, hour=t[3], minute=t[4], second=t[5]}
+  end  
+  d = {y, m, day, t[3], t[4], t[5]}
   date = '%s-%s-%s'
-  date = string.format(date, d.year, d.month, d.day)
+  date = string.format(date, d[1], d[2], d[3])
   time = '%s:%s:%s'
-  time = string.format(time, d.hour, d.minute, d.second)
+  time = string.format(time, d[4], d[5], d[6])
   ts = '%s %s'
-  return string.format(ts, date, time)
+  return string.format(ts,date,time)
 end
 
-function log.insert_log(date, domain, source)
+function log.insert_log(date,domain,source)
   if data.ip4addr(source) == false then
     nixio.syslog('err', 'Invalid source: ' .. source)
     return false
   end
   local re = '[%w.-]+'
-  if string.match(domain, re) ~= domain then
+  if string.match(domain,re) ~= domain then
     nixio.syslog('err', 'Invalid domain: ' .. domain)
     return false
   end
@@ -77,27 +77,27 @@ function log.insert_log(date, domain, source)
     return false
   end
   local re = '%d%d%d%d%-%d%d%-%d%d% %d%d%:%d%d%:%d%d'
-  local s = string.find(date, re)
+  local s = string.find(date,re)
   if s == nil then
     nixio.syslog('err', 'Invalid date format:' .. date)
     return false
   end
-  if string.sub(date, s) ~= date then
+  if string.sub(date,s) ~= date then
     nixio.syslog('err', 'Date not matched, got: ' .. date)
     return false
   end
   -- Get session id and secret to find user_id for this connection in WP tables.
   local cmd = '/usr/bin/find /var/localdb -name %s -type d'
-  cmd = string.format(cmd, source)
+  cmd = string.format(cmd,source)
   local dir = io.popen(cmd):read('*l')
   local cmd = '/bin/ls %s'
-  cmd = string.format(cmd, dir)
+  cmd = string.format(cmd,dir)
   local sid = io.popen(cmd):read('*l')
   cmd = cmd .. '/%s'
-  cmd = string.format(cmd, sid)
+  cmd = string.format(cmd,sid)
   secret = io.popen(cmd):read('*l')
   cmd = cmd .. '/%s'
-  cmd = string.format(cmd, secret)
+  cmd = string.format(cmd,secret)
   user_id = io.popen(cmd):read('*l')
   local row = '{\\"date\\": \\"%s\\", \\"user_id\\": \\"%s\\", \\"domain\\": \\"%s\\"}'
   local row = string.format(row,date,user_id,domain)
