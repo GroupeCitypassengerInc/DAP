@@ -172,13 +172,30 @@ end
 --------- GET CONFIG WORDPRESS 
 ------------------------
 
+local cmd = '/usr/bin/curl "%s/index.php?' ..
+'digilan-token-action=add&digilan-token-secret=%s&hostname=%s"'
+local cmd = string.format(cmd,url,secret,hostname)
+local wp_reg = io.popen(cmd):read('*a')
+if wp_reg == nil then
+  nixio.syslog('err','Failed to access wp api')
+  return false
+end
+wp_reg = json.parse(wp_reg)
+if wp_reg.message == 'created' then
+  nixio.syslog('info','hostname sent to wp')
+elseif wp_reg.message == 'exists' then
+  nixio.syslog('info','hostname already sent')
+else
+  nixio.syslog('err','Unexpected behaviour')
+  return false
+end
 
 local cmd = '/usr/bin/curl "%s/index.php?' ..
 'digilan-token-action=configure&digilan-token-secret=%s&hostname=%s"'
 local cmd = string.format(cmd,url,secret,hostname)
 local wp_resp = io.popen(cmd):read('*a')
 
-if wp_resp = nil then
+if wp_resp == nil then
   nixio.syslog('err','Failed to get wordpress parameters.')
   return false
 end
@@ -205,12 +222,12 @@ end
 -- Update timeout
 data = parser.load(ini_file)
 --- Update timeout
-if tonumber(resp['timeout']) == nil then
-  nixio.syslog('err',resp['timeout'] .. ' is not a number.')
+if tonumber(wp_resp['timeout']) == nil then
+  nixio.syslog('err',wp_resp['timeout'] .. ' is not a number.')
   return false
 end
 if data.ap.timeout ~= wp_resp['timeout'] then
-  data.ap.timeout = resp['timeout']
+  data.ap.timeout = wp_resp['timeout']
   parser.save(ini_file,data)
 else
   nixio.syslog('info','timeout is up to date')
@@ -260,7 +277,7 @@ if s ~= 0 then
   reload.dnsmasq()
 end
 
-local check = '/usr/bin/test -e /tmp/dnsmasq_portal.pid'
+local check = '/usr/bin/test -e /tmp/dnsmasq-portal.pid'
 local s = os.execute(check)
 if s ~= 0 then
   reload.dnsmasq_portal()
