@@ -205,9 +205,9 @@ wp_resp = json.parse(wp_resp)
 --- UPDATE SSID
 local ssid_new = wp_resp['ssid']
 if data.ap.ssid ~= ssid_new then
-  change_ssid = "/bin/sed -i 's#^ssid=.*#ssid=%s#g' %s"
+  change_ssid = "/bin/sed -i 's#^ssid=%s#ssid=%s#g' %s"
   for k,v in pairs(resp['files']) do
-    local s = string.format(change_ssid,ssid_new,k)
+    local s = string.format(change_ssid,data.ap.ssid,ssid_new,k)
     local t = os.execute(s)
     if t ~= 0 then
       nixio.syslog('err','Failed to change ssid in ' .. k)
