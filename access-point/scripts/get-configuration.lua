@@ -178,6 +178,11 @@ local cmd = '/usr/bin/curl "%s/index.php?' ..
 local cmd = string.format(cmd,url,secret,hostname)
 local wp_resp = io.popen(cmd):read('*a')
 
+if wp_resp = nil then
+  nixio.syslog('err','Failed to get wordpress parameters.')
+  return false
+end
+
 wp_resp = json.parse(wp_resp)
 
 --- UPDATE SSID
@@ -193,6 +198,8 @@ if data.ap.ssid ~= ssid_new then
   end
   data.ap.ssid = ssid_new
   parser.save(ini_file,data)
+else
+  nixio.syslog('info','ssid is up to date')
 end
 
 -- Update timeout
