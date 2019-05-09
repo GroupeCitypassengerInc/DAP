@@ -21,7 +21,7 @@ local path_addr = '/sys/devices/platform/ag71xx.0/net/eth0/address'
 local ini_file = '/etc/proxy.ini'
 local mac     = io.popen('/bin/cat ' .. path_addr):read('*l')
 local api_key = io.popen('/bin/cat /root/.ssh/apikey'):read('*l')
-local bssid_base = '70:b3:d5:e7:e'
+local base_bssid = '70:b3:d5:e7:e'
 local m = string.sub(mac,14,17)
 local mask = string.gsub(m,':','')
 local mask = '0x' .. mask
@@ -38,7 +38,6 @@ local data =
     timeout=7200,
     mac_addr=path_addr,
     secret='',
-    hardware='',
     ssid=''
   },
   portal=
@@ -103,10 +102,16 @@ end
 
 --- UPDATE HOSTAPD HEADER (HARDWARE CONFIGURATION)
 local hardware_new = ''
+local hardware_now = ''
 for k,v in pairs(resp['files']) do
+  g = io.open(k .. '.header')
+  h = g:read('*a')
+  g:close()
+  hardware_now = hardware_now .. h
   hardware_new = hardware_new .. v
 end
-if data.ap.hardware ~= hardware_new then
+
+if hardware_now ~= hardware_new then
   local cmd = '/usr/bin/killall hostapd'
   local x = os.execute(cmd)
   if x ~= 0 then
@@ -114,6 +119,7 @@ if data.ap.hardware ~= hardware_new then
   end
   os.execute('sleep 1')
   data.ap.hardware = ''
+  local i = 0
   for k,v in pairs(resp['files']) do
     mask = (mask + i) % 4096
     local n = mask
@@ -125,7 +131,9 @@ if data.ap.hardware ~= hardware_new then
     f:write(v)
     f:write('bssid=' .. bssid.. '\nbridge=bridge1\nssid=Borne Autonome')
     f:close()
-    data.ap.hardware = data.ap.hardware .. v
+    g = io.open(k .. '.header','w')
+    g:write(v)
+    g:close()
     i = i + 1
     reload.hostapd(k)
   end
@@ -202,25 +210,35 @@ end
 
 wp_resp = json.parse(wp_resp)
 
+--- LOAD CURRENT INI FILE
+data = parser.load(ini_file)
+
 --- UPDATE SSID
 local ssid_new = wp_resp['ssid']
 if data.ap.ssid ~= ssid_new then
-  change_ssid = "/bin/sed -i 's#^ssid=%s#ssid=%s#g' %s"
+  local cmd = '/usr/bin/killall hostapd'
+  local x = os.execute(cmd)
+  if x ~= 0 then
+    nixio.syslog('warning','No hostapd killed.')
+  end
+  os.execute('sleep 1')
+  change_ssid = "/bin/sed -i 's#^ssid=.*#ssid=%s#g' %s"
   for k,v in pairs(resp['files']) do
-    local s = string.format(change_ssid,data.ap.ssid,ssid_new,k)
+    local s = string.format(change_ssid,ssid_new,k)
     local t = os.execute(s)
     if t ~= 0 then
       nixio.syslog('err','Failed to change ssid in ' .. k)
     end
+    reload.hostapd(k)
   end
   data.ap.ssid = ssid_new
   parser.save(ini_file,data)
+  reload.bridge()                                                    
+  reload.dnsmasq()
 else
   nixio.syslog('info','ssid is up to date')
 end
 
--- Update timeout
-data = parser.load(ini_file)
 --- Update timeout
 if tonumber(wp_resp['timeout']) == nil then
   nixio.syslog('err',wp_resp['timeout'] .. ' is not a number.')
