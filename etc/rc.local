@@ -1,25 +1,14 @@
 ## ----- USER:HEADER -----
 ## ----- END USER:HEADER -----
 
+/etc/init.d/sysntpd start
 sleep 5
 ../etc/rules.sh
 /etc/init.d/dnsmasq disable
 /etc/init.d/dnsmasq stop
 mkdir /var/localdb
-sleep 5
-start-stop-daemon -p /tmp/hostapd.0.pid -x hostapd -S -- -B -P /tmp/hostapd.0.pid /etc/hostapd.0.conf
-sleep 5
-start-stop-daemon -p /tmp/hostapd.1.pid -x hostapd -S -- -B -P /tmp/hostapd.1.pid /etc/hostapd.1.conf
-sleep 5
-ifconfig bridge1 up
-ifconfig bridge1 192.168.1.1
+touch /tmp/dns.data
 mkfifo /tmp/dns.log
-sleep 5
-dnsmasq --conf-file=/etc/dnsmasq-dhcp.conf --guard-ip=10.168.168.1
-sleep 5
-dnsmasq --conf-file=/etc/dnsmasq.portal &
-sleep 5
-lua /scripts/logger.lua &
 sleep 5
 ip_wan=$(ifconfig eth0.1 | grep 'inet addr' | cut -d: -f2 | awk '{print $1}')
 uci set uhttpd.main.listen_http=$ip_wan:80
@@ -28,8 +17,8 @@ sleep 5
 /etc/init.d/cron start
 sleep 10
 /etc/init.d/uhttpd restart
+../scripts/file-watcher.sh
 ## ----- USER:FOOTER -----
 ## ----- END USER:FOOTER -----
 
 exit 0
-
