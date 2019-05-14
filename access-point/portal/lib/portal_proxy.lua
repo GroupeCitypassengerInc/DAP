@@ -16,16 +16,18 @@ local CURL     = "/usr/bin/curl "
 
 function redirect(url)
   uhttpd.send("Status: 302 Found\r\n")
-  uhttpd.send("Location: " .. url .. "\r\n")  
+  uhttpd.send("Location: "..url.."\r\n")  
   uhttpd.send("Content-Type: text/html\r\n")
   uhttpd.send("\r\n\r\n")
 end
 
 function proxy.success()
-  if cst.landing_page == nil then 
+  if cst.landing_page == nil then
+    nixio.syslog('info', cst.landing_page .. ' : FOO')
     redirect(cst.PortalUrl .. "/")
   else
     redirect(cst.landing_page)
+    nixio.syslog('info', cst.landing_page .. ' : BAR')
   end
 end
 
@@ -43,6 +45,7 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
   '/index.php?digilan-token-action=create&user_ip=' .. 
   user_ip ..'&ap_mac=' .. cst.ap_mac .. 
   '&digilan-token-secret=' .. ap_secret .. '"'
+  print(cmd)
   -- server responds with secret and sid
   local server_response = io.popen(cmd):read("*a")
   local response        = json.parse(server_response)
@@ -54,7 +57,7 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
     local cmd = "/bin/rm -rf " .. cst.localdb .. "/" .. user_mac
     local x = os.execute(cmd)
     if x ~= 0 then
-      nixio.syslog("err",cmd .. " Failed with exit code: " .. x)
+      nixio.syslog('err', cmd .. ' Failed with exit code: ' .. x)
     end
     return false
   end
@@ -92,8 +95,8 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
 
   -- return a 302
   local rdrinfo = "session_id=" .. sid .. "&mac=" .. user_mac 
-  redirect(cst.PortalUrl .. "/" .. cst.PortalPage .. rdrinfo)
-  return {sid,secret}
+  redirect(cst.PortalPage .. "?" .. rdrinfo)
+  return { sid, secret }
 end
 
 function proxy.validate(user_mac,user_ip,sid,secret)
@@ -106,21 +109,22 @@ function proxy.validate(user_mac,user_ip,sid,secret)
   if user_id == false then
     return false
   end
-  local params = {cst.localdb,user_mac,user_ip,sid,secret}
+  local params = {cst.localdb, user_mac, user_ip, sid, secret}
   local path   = table.concat(params,"/")
   local mkdir  = fs.mkdirr(path .. "/" .. user_id)
-  if mkdir == false then 
+  if mkdir == true then
+    local cmd_auth = "/usr/sbin/iptables -t nat -I PREROUTING -p udp -s " ..user_ip ..                         
+    " -m mac --mac-source " .. user_mac .. " --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
+    local a = os.execute(cmd_auth)
+    if a ~= 0 then
+      nixio.syslog('err', cmd_auth .. ' failed with exit code: ' .. a)
+      return false
+    end
+    return true
+  else
     local errno = nixio.errno()
     local errmsg = nixio.strerror(errno)
     nixio.syslog("err", errno .. ": " .. errmsg)
-    return false
-  end
-  local cmd_auth = "/usr/sbin/iptables -t nat -I PREROUTING -p udp -s %s" ..
-  " -m mac --mac-source %s --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
-  local cmd_auth = string.format(cmd_auth,user_ip,user_mac)
-  local a = os.execute(cmd_auth)
-  if a ~= 0 then
-    nixio.syslog("err", cmd_auth .. " failed with exit code: " .. a)
     return false
   end
   return true
@@ -128,34 +132,31 @@ end
 
 function validate_data_on_server(user_ip,user_mac,secret,sid)
   local ap_secret = cst.ap_secret
-  local cmd = "%s '%s/index.php?digilan-token-action=validate" .. 
-  "&user_ip=%s&ap_mac=%s&secret=%s&session_id=%s&digilan-token-secret=%s'"
-  local cmd = string.format(
-    cmd,
-    CURL,cst.PortalUrl,
-    user_ip,cst.ap_mac,secret,sid,ap_secret
-  )
+  local cmd  = CURL ..'"' ..  cst.PortalUrl .. '/index.php?digilan-token-action=validate&user_ip='
+  .. user_ip .. '&ap_mac='.. cst.ap_mac ..
+  '&secret=' .. secret .. '&session_id=' .. sid ..'&digilan-token-secret=' .. ap_secret.. '"'
   local server_response = io.popen(cmd):read("*a")
   local response        = json.parse(server_response)
-  if response.authenticated then
-    return response.user_id
+  local r               = response.authenticated
+  local user_id 	= response.user_id
+  if r == true then
+    return user_id
   end
   return false
 end
 
 function proxy.deauthenticate_user(user_ip,user_mac)
-  local cmd = "/usr/sbin/iptables -t nat -D PREROUTING -p udp -s %s" .. 
-  " -m mac --mac-source %s --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
-  local cmd = string.format(cmd,user_ip,user_mac)
+  local cmd = "/usr/sbin/iptables -t nat -D PREROUTING -p udp -s " ..user_ip .. 
+  " -m mac --mac-source " .. user_mac .. " --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
   local x = os.execute(cmd)
   if x ~= 0 then
-    nixio.syslog("err",cmd .. " failed with exit code: " .. x)
+    nixio.syslog('err',cmd .. ' failed with exit code: ' .. x)
     return false
   end
   local cmd = "/bin/rm -rf " .. cst.localdb .. "/" .. user_mac
   local y = os.execute(cmd)
   if y ~= 0 then
-    nixio.syslog("err",cmd .. " failed with exit code: " .. y)
+    nixio.syslog('err',cmd .. ' failed with exit code: ' .. y)
     return false
   end
 end
@@ -172,7 +173,7 @@ function proxy.status_user(user_ip,user_mac)
   if sid_db == nil then
     return "Lease. Not in localdb"
   end
-  local cmd_secret = "/bin/ls " .. select_db .."/" .. sid_db 
+  local cmd_secret = "ls " .. select_db .."/" .. sid_db 
   local secret_db  = io.popen(cmd_secret):read("*l")
   user_mac         = string.upper(user_mac)
   local cmd = "/usr/sbin/iptables-save | /bin/grep ".. user_ip .. " | /bin/grep " .. user_mac .. " > /dev/null"
