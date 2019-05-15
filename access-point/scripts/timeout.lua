@@ -42,9 +42,7 @@ for line in dhcp_leases:lines() do
     if date_now - date_auth >= timeout then
       portal_proxy.deauthenticate_user(ip,mac)
       nixio.syslog("info","Timeout for authenticated user " .. mac .. ".\n")
-      os.exit()
     end
-    return true
   end
   if status == "User in localdb" then
     local cmd = "/bin/date -r /var/localdb/" .. mac .. "/".. ip .. " +%s"
@@ -55,9 +53,6 @@ for line in dhcp_leases:lines() do
     if date_now - date_auth >= 900 then
       portal_proxy.deauthenticate_user(ip,mac)
       nixio.syslog("info","Timeout for user " .. mac .. ".\n")
-      os.exit()
     end
-    return true
   end
-  os.exit()
 end 
