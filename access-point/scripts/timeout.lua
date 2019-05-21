@@ -55,4 +55,5 @@ for line in dhcp_leases:lines() do
       nixio.syslog("info","Timeout for user " .. mac .. ".\n")
     end
   end
-end 
+end
+dhcp_leases:close()
