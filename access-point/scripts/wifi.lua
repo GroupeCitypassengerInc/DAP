@@ -6,7 +6,7 @@
 --
 --]]
 
-package.path       = package.path .. ";/portal/lib/?.lua"
+package.path       = package.path .. ";/portal/lib/?.lua;/scripts/?.lua"
 local cst          = require "proxy_constants"
 local portal_proxy = require "portal_proxy"
 uhttpd             = require "uhttpd"
@@ -16,7 +16,7 @@ local option   = arg[1]
 local user_ip  = arg[2]
 local user_mac = arg[3]
 
-function verify_arguments(user_ip,user_mac)
+local function verify_arguments(user_ip,user_mac)
   if data.ip4addr(user_ip) == false then
     print("Invalid ip address")	
     os.exit()
@@ -37,17 +37,42 @@ function verify_arguments(user_ip,user_mac)
   return true
 end
 
+local function split_line(line)
+  words = {}
+  re = "[%w.:%-%_]+"
+  for word in string.gmatch(line,re) do
+    table.insert(words,word)
+  end
+  return words
+end
+
+local function get_mac(line)
+  local t = split_line(line)
+  return t[2]
+end 
+
+local function get_ip(line)
+  local t = split_line(line)
+  return t[3]
+end
+
+local function get_hostname(line)
+  local t = split_line(line)
+  return t[4]
+end
+
 if option == "list" then
   local path_dhcp   = "/tmp/dhcp.leases"
   local dhcp_leases = io.open("/tmp/dhcp.leases")
   print("Mac address\t\tIP address\tHostname\tStatus")
   for line in dhcp_leases:lines() do 
-    local mac = io.popen("echo " .. line .. " | awk '{print $2}'"):read("*l")
-    local ip = io.popen("echo " .. line .. " | awk '{print $3}'"):read("*l")
-    local hostname = io.popen("echo " .. line .. " | awk '{print $4}'"):read("*l")
+    local mac = get_mac(line)
+    local ip = get_ip(line)
+    local hostname = get_hostname(line)
     local status = portal_proxy.status_user(ip,mac)
     print(mac .. "\t" .. ip .. "\t" .. hostname .. "\t" .. status)
   end
+  dhcp_leases:close()
 elseif option == "add" then
   if verify_arguments(user_ip,user_mac) == false then
     return false
