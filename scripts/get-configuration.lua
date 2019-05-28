@@ -1,4 +1,12 @@
 #!/usr/bin/lua
+--[[
+--
+--  Script to get configuration from Cityscope and WordPress Portal.
+--  Returns 0 on success.
+--  Returns 1 on fail.
+--
+--]]
+
 package.path = package.path .. ';/portal/lib/?.lua'
 local parser = require 'LIP'
 local json   = require 'luci.jsonc'
@@ -65,6 +73,7 @@ url = nil
 if resp == nil then
   parser.save(ini_file,data)
   nixio.syslog('info','No secret and URL.')
+  os.exit(1)
 else
   url = resp['portalUrl']
   secret = resp['secret']
@@ -118,7 +127,6 @@ if hardware_now ~= hardware_new then
     nixio.syslog('warning','No hostapd killed.')
   end
   os.execute('sleep 1')
-  data.ap.hardware = ''
   local i = 0
   for k,v in pairs(resp['files']) do
     mask = (mask + i) % 4096
@@ -180,6 +188,8 @@ end
 --------- GET CONFIG WORDPRESS 
 ------------------------
 
+--- SEND HOSTNAME TO WP
+
 local cmd = '/usr/bin/curl "%s/index.php?' ..
 'digilan-token-action=add&digilan-token-secret=%s&hostname=%s"'
 local cmd = string.format(cmd,url,secret,hostname)
@@ -197,6 +207,8 @@ else
   nixio.syslog('err','Unexpected behaviour')
   return false
 end
+
+--- GET SETTINGS FROM WORDPRESS
 
 local cmd = '/usr/bin/curl "%s/index.php?' ..
 'digilan-token-action=configure&digilan-token-secret=%s&hostname=%s"'
@@ -281,6 +293,17 @@ if s ~= 0 then
   reload.hostapd('/etc/hostapd.0.conf')
 end
 
+local cmd = '/bin/cat /tmp/hostapd.support.pid'
+local pid = io.popen(cmd):read('*l')
+if pid ~= nil then
+  local cmd = '/bin/kill %s'
+  local cmd = string.format(cmd,pid)
+  local s = os.execute(cmd)
+  if s ~= 0 then
+    nixio.syslog('info','failed to kill hostapd support. Exit code: ' .. s)
+  end
+end
+
 local check = '/usr/bin/test -e /tmp/hostapd.1.pid'
 local s = os.execute(check)
 if s ~= 0 then
@@ -301,3 +324,5 @@ if s ~= 0 then
   reload.dnsmasq_portal()
   reload.logger()
 end
+os.execute('/etc/init.d/uhttpd restart')
+os.exit()
