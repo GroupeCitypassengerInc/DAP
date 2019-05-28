@@ -150,7 +150,6 @@ function proxy.deauthenticate_user(user_ip,user_mac)
   " -m mac --mac-source " .. user_mac .. " --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
   local x = os.execute(cmd)
   if x ~= 0 then
-    nixio.syslog('err',cmd .. ' failed with exit code: ' .. x)
     return false
   end
   local cmd = "/bin/rm -rf " .. cst.localdb .. "/" .. user_mac
@@ -173,10 +172,11 @@ function proxy.status_user(user_ip,user_mac)
   if sid_db == nil then
     return "Lease. Not in localdb"
   end
-  local cmd_secret = "ls " .. select_db .."/" .. sid_db 
+  local cmd_secret = "/bin/ls " .. select_db .."/" .. sid_db 
   local secret_db  = io.popen(cmd_secret):read("*l")
   user_mac         = string.upper(user_mac)
-  local cmd = "/usr/sbin/iptables-save | /bin/grep ".. user_ip .. " | /bin/grep " .. user_mac .. " > /dev/null"
+  local cmd = "/usr/sbin/iptables-save | /bin/grep 'A PREROUTING -s %s/32 -p udp -m mac --mac-source %s' > /dev/null"
+  local cmd = string.format(cmd,user_ip,user_mac)
   if os.execute(cmd) ~= 0 then
     return "User in localdb"
   end
