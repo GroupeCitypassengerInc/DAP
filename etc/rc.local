@@ -11,6 +11,9 @@ touch /tmp/dns.data
 mkfifo /tmp/dns.log
 sleep 5
 ip_wan=$(ifconfig eth0.1 | grep 'inet addr' | cut -d: -f2 | awk '{print $1}')
+if [ -z $ip_wan ];then
+  ip_wan="172.16.3.2"
+fi
 uci set uhttpd.main.listen_http=$ip_wan:80
 uci commit uhttpd
 sleep 5
