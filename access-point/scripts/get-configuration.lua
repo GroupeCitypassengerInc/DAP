@@ -163,21 +163,15 @@ if url == nil then
 end
 domain = url:match('^%w+://([^/]+)')
 
-
 -- Checks if portal is in white list
-local cmd = '/bin/grep "' .. domain .. '" /etc/dnsmasq-white.conf'
+local cmd = '/bin/grep "' .. domain .. '" /etc/dnsmasq-white.conf > /dev/null'
 local x = os.execute(cmd)
 if x == 256 then
   -- Append portal url to white list
-  local cmd = '/bin/echo ' .. domain .. ' >> /etc/dnsmasq-white.conf'
-  y = os.execute(cmd)
-  if y ~= 0 then
-    nixio.syslog('err','Could not append portal url to whitelist. Exit code: ' 
-    .. y)
-  end
+  local f = io.open('/etc/dnsmasq-white.conf','a')
+  f:write(domain)
+  f:close()
   nixio.syslog('info','Updated whitelist.')
-
-  -- Restart dnsmasq
   reload.dnsmasq()
 elseif x ~= 0 then
   nixio.syslog('err','grep failed. Exit code: ' .. x)
@@ -294,9 +288,12 @@ if s ~= 0 then
   reload.hostapd('/etc/hostapd.0.conf')
 end
 
-local cmd = '/bin/cat /tmp/hostapd.support.pid'
-local pid = io.popen(cmd):read('*l')
-if pid ~= nil then
+-- kill hostapd support if needed
+local check = '/usr/bin/test -e /tmp/hostapd.support.pid'
+local s = os.execute(check)
+if s == 0 then
+  local cmd = '/bin/cat /tmp/hostapd.support.pid'
+  local pid = io.popen(cmd):read('*l')
   local cmd = '/bin/kill %s'
   local cmd = string.format(cmd,pid)
   local s = os.execute(cmd)
