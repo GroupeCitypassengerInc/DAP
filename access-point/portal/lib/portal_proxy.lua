@@ -39,7 +39,7 @@ end
 function proxy.initialize_redirected_client(user_ip,user_mac)
   -- Send a request to server
   local ap_secret = cst.ap_secret
-  local cmd = CURL ..'"' .. cst.PortalUrl .. 
+  local cmd = CURL ..'--retry 3 "' .. cst.PortalUrl .. 
   '/index.php?digilan-token-action=create&user_ip=' .. 
   user_ip ..'&ap_mac=' .. cst.ap_mac .. 
   '&digilan-token-secret=' .. ap_secret .. '"'
