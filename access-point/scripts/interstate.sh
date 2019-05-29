@@ -19,6 +19,7 @@ else
     touch $FILE_INTERNET
     rm -f $FILE_NOINTERNET
     lua /scripts/get-configuration.lua
+    brctl addif bridge1 wlan0
   fi
 fi
 return 0

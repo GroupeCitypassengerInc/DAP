@@ -126,24 +126,24 @@ if hardware_now ~= hardware_new then
   if x ~= 0 then
     nixio.syslog('warning','No hostapd killed.')
   end
-  os.execute('sleep 1')
+  os.execute('/bin/sleep 1')
   local i = 0
-  for k,v in pairs(resp['files']) do
+  for hostapd_file,conf in pairs(resp['files']) do
     mask = (mask + i) % 4096
     local n = mask
     local s = string.format('%x',n)
     local s = format_mask(s)
     local suffix = string.sub(s,1,1) .. ":" .. string.sub(s,2,3)
     local bssid = base_bssid .. suffix
-    f = io.open(k,'w')
-    f:write(v)
+    f = io.open(hostapd_file,'w')
+    f:write(conf)
     f:write('bssid=' .. bssid.. '\nbridge=bridge1\nssid=Borne Autonome')
     f:close()
-    g = io.open(k .. '.header','w')
-    g:write(v)
+    g = io.open(hostapd_file .. '.header','w')
+    g:write(conf)
     g:close()
     i = i + 1
-    reload.hostapd(k)
+    reload.hostapd(hostapd_file)
   end
   reload.bridge()
   reload.dnsmasq()
@@ -233,15 +233,15 @@ if data.ap.ssid ~= ssid_new then
   if x ~= 0 then
     nixio.syslog('warning','No hostapd killed.')
   end
-  os.execute('sleep 1')
+  os.execute('/bin/sleep 1')
   change_ssid = "/bin/sed -i 's#^ssid=.*#ssid=%s#g' %s"
-  for k,v in pairs(resp['files']) do
-    local s = string.format(change_ssid,ssid_new,k)
+  for hostapd_file in pairs(resp['files']) do
+    local s = string.format(change_ssid,ssid_new,hostapd_file)
     local t = os.execute(s)
     if t ~= 0 then
-      nixio.syslog('err','Failed to change ssid in ' .. k)
+      nixio.syslog('err','Failed to change ssid in ' .. hostapd_file)
     end
-    reload.hostapd(k)
+    reload.hostapd(hostapd_file)
   end
   data.ap.ssid = ssid_new
   parser.save(ini_file,data)
@@ -281,6 +281,7 @@ local new_portal_page = wp_resp['portal_page']
 if portal_page ~= new_portal_page then
   data.portal.page = new_portal_page
   parser.save(ini_file,data)
+  nixio.syslog('info','portal login page updated')
   reload.uhttpd()
 else
   nixio.syslog('info','portal page is up to date')

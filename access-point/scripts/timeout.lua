@@ -50,7 +50,7 @@ for line in dhcp_leases:lines() do
     date_auth = tonumber(date_auth)
     local date_now = io.popen("/bin/date +%s"):read("*l")
     date_now = tonumber(date_now)
-    if date_now - date_auth >= 900 then
+    if date_now - date_auth >= 7200 then
       portal_proxy.deauthenticate_user(ip,mac)
       nixio.syslog("info","Timeout for user " .. mac .. ".\n")
     end
