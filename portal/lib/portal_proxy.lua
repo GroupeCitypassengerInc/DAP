@@ -23,11 +23,9 @@ end
 
 function proxy.success()
   if cst.landing_page == nil then
-    nixio.syslog('info', cst.landing_page .. ' : FOO')
     redirect(cst.PortalUrl .. "/")
   else
     redirect(cst.landing_page)
-    nixio.syslog('info', cst.landing_page .. ' : BAR')
   end
 end
 
@@ -57,7 +55,7 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
     local cmd = "/bin/rm -rf " .. cst.localdb .. "/" .. user_mac
     local x = os.execute(cmd)
     if x ~= 0 then
-      nixio.syslog('err', cmd .. ' Failed with exit code: ' .. x)
+      nixio.syslog("err", cmd .. " Failed with exit code: " .. x)
     end
     return false
   end
@@ -109,7 +107,7 @@ function proxy.validate(user_mac,user_ip,sid,secret)
   if user_id == false then
     return false
   end
-  local params = {cst.localdb, user_mac, user_ip, sid, secret}
+  local params = {cst.localdb,user_mac,user_ip,sid,secret}
   local path   = table.concat(params,"/")
   local mkdir  = fs.mkdirr(path .. "/" .. user_id)
   if mkdir == true then
@@ -117,7 +115,7 @@ function proxy.validate(user_mac,user_ip,sid,secret)
     " -m mac --mac-source " .. user_mac .. " --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
     local a = os.execute(cmd_auth)
     if a ~= 0 then
-      nixio.syslog('err', cmd_auth .. ' failed with exit code: ' .. a)
+      nixio.syslog("err", cmd_auth .. " failed with exit code: " .. a)
       return false
     end
     return true
@@ -149,13 +147,13 @@ function proxy.deauthenticate_user(user_ip,user_mac)
   local cmd = "/usr/sbin/iptables -t nat -D PREROUTING -p udp -s " ..user_ip .. 
   " -m mac --mac-source " .. user_mac .. " --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
   local x = os.execute(cmd)
-  if x ~= 0 then
-    return false
+  if x == 512 then
+    nixio.syslog("warning",cmd .. " failed with exit code 512")
   end
   local cmd = "/bin/rm -rf " .. cst.localdb .. "/" .. user_mac
   local y = os.execute(cmd)
   if y ~= 0 then
-    nixio.syslog('err',cmd .. ' failed with exit code: ' .. y)
+    nixio.syslog("err",cmd .. " failed with exit code: " .. y)
     return false
   end
 end

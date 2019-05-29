@@ -4,9 +4,15 @@ local portal_proxy = require "portal_proxy"
 local protocol     = require "luci.http.protocol"
 local json         = require "luci.jsonc"
 local nixio        = require "nixio"
+local support      = require "troubleshooting"
 local fs           = require "nixio.fs"
 
 function handle_request(env)
+  local a = os.execute('/usr/bin/test -e /tmp/internet')
+  if a ~= 0 then
+    support.troubleshoot()
+    os.exit()
+  end
   local query_string = env.QUERY_STRING	
 
   local user_ip   = env.REMOTE_ADDR
