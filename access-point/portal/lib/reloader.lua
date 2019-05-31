@@ -65,7 +65,6 @@ function r.hostapd(path)
   local pid_path = string.gsub(p,'conf','pid')
   local cmd = '/usr/sbin/hostapd -B -P %s %s'
   local cmd = string.format(cmd,pid_path,path)
-  print(cmd)
   local h = os.execute(cmd)
   if h ~= 0 then
     nixio.syslog('err',cmd .. ' failed. Exit code: '
