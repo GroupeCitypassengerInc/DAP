@@ -188,11 +188,11 @@ local cmd = '/usr/bin/curl --retry 1 "%s/index.php?' ..
 'digilan-token-action=add&digilan-token-secret=%s&hostname=%s"'
 local cmd = string.format(cmd,url,secret,hostname)
 local wp_reg = io.popen(cmd):read('*a')
+local wp_reg = json.parse(wp_reg)
 if wp_reg == nil then
-  nixio.syslog('err','Failed to access wp api')
-  return false
+  nixio.syslog('err','failed to access wp api')
+  return false  
 end
-wp_reg = json.parse(wp_reg)
 if wp_reg['message'] == 'created' then
   nixio.syslog('info','hostname sent to wp')
 elseif wp_reg['message'] == 'exists' then
@@ -209,12 +209,12 @@ local cmd = '/usr/bin/curl "%s/index.php?' ..
 local cmd = string.format(cmd,url,secret,hostname)
 local wp_resp = io.popen(cmd):read('*a')
 
+wp_resp = json.parse(wp_resp)
+
 if wp_resp == nil then
   nixio.syslog('err','Failed to get wordpress parameters.')
   return false
 end
-
-wp_resp = json.parse(wp_resp)
 
 --- LOAD CURRENT INI FILE
 data = parser.load(ini_file)
