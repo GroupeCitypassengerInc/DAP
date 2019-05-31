@@ -43,7 +43,6 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
   '/index.php?digilan-token-action=create&user_ip=' .. 
   user_ip ..'&ap_mac=' .. cst.ap_mac .. 
   '&digilan-token-secret=' .. ap_secret .. '"'
-  print(cmd)
   -- server responds with secret and sid
   local server_response = io.popen(cmd):read("*a")
   local response        = json.parse(server_response)
