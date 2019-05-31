@@ -174,8 +174,8 @@ if x == 256 then
   nixio.syslog('info','Updated whitelist.')
   reload.dnsmasq()
 elseif x ~= 0 then
-  nixio.syslog('err','grep failed. Exit code: ' .. x)
-  return false
+  nixio.syslog('err','Could not update whitelist. grep failed. Exit code: ' .. x)
+  os.exit(1)
 end
 
 ------------------------
@@ -184,7 +184,7 @@ end
 
 --- SEND HOSTNAME TO WP
 
-local cmd = '/usr/bin/curl "%s/index.php?' ..
+local cmd = '/usr/bin/curl --retry 1 "%s/index.php?' ..
 'digilan-token-action=add&digilan-token-secret=%s&hostname=%s"'
 local cmd = string.format(cmd,url,secret,hostname)
 local wp_reg = io.popen(cmd):read('*a')
@@ -193,9 +193,9 @@ if wp_reg == nil then
   return false
 end
 wp_reg = json.parse(wp_reg)
-if wp_reg.message == 'created' then
+if wp_reg['message'] == 'created' then
   nixio.syslog('info','hostname sent to wp')
-elseif wp_reg.message == 'exists' then
+elseif wp_reg['message'] == 'exists' then
   nixio.syslog('info','hostname already sent')
 else
   nixio.syslog('err','Unexpected behaviour')
@@ -205,7 +205,7 @@ end
 --- GET SETTINGS FROM WORDPRESS
 
 local cmd = '/usr/bin/curl "%s/index.php?' ..
-'digilan-token-action=configure&digilan-token-secret=%s&hostname=%s"'
+'digilan-token-action=configure&digilan-token-secret=%s&hostname=%s" -s'
 local cmd = string.format(cmd,url,secret,hostname)
 local wp_resp = io.popen(cmd):read('*a')
 
@@ -300,7 +300,14 @@ if s == 0 then
   if s ~= 0 then
     nixio.syslog('info','failed to kill hostapd support. Exit code: ' .. s)
   end
+  local cmd = '/bin/rm -f /tmp/hostapd.support.pid'
+  local s = os.execute(cmd)
+  if s ~= 0 then
+    nixio.syslog('err','failed to remove /tmp/hostapd.support.conf. Exit code: ' .. s)
+  end
 end
+
+os.execute('/bin/sleep 1')
 
 local check = '/usr/bin/test -e /tmp/hostapd.1.pid'
 local s = os.execute(check)
