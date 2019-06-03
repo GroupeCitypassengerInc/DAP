@@ -161,7 +161,7 @@ end
 --]]
 
 if url == nil then
-  nixio.syslog('warn','No portal URL')
+  nixio.syslog('warning','No portal URL')
   return false
 end
 domain = url:match('^%w+://([^/]+)')
