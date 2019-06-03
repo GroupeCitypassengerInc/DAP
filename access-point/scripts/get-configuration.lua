@@ -69,6 +69,7 @@ else
 end
 
 url = nil
+secret = nil
 
 if resp == nil then
   parser.save(ini_file,data)
@@ -148,6 +149,8 @@ if hardware_now ~= hardware_new then
   reload.bridge()
   reload.dnsmasq()
   data.ap.ssid = 'Borne Autonome'
+  data.ap.secret = secret
+  data.portal.url = url
   parser.save(ini_file,data)
 end
 
