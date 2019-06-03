@@ -90,6 +90,9 @@ function log.insert_log(date,domain,source)
   local cmd = '/usr/bin/find /var/localdb -name %s -type d'
   cmd = string.format(cmd,source)
   local dir = io.popen(cmd):read('*l')
+  if dir == nil then
+    return false
+  end
   local cmd = '/bin/ls %s'
   cmd = string.format(cmd,dir)
   local sid = io.popen(cmd):read('*l')
