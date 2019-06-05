@@ -11,6 +11,16 @@ function route()
   return io.popen(cmd):read('*a')
 end
 
+function is_port2_plugged()
+  cmd = '/sbin/swconfig dev switch0 port 2 show | /usr/bin/tail -n1'
+  return io.popen(cmd):read('*a')
+end
+
+function port(iface)
+  cmd = '/bin/cat /proc/' .. iface
+  return io.popen(cmd):read('*a')
+end
+
 function ifconfig()
   cmd = '/sbin/ifconfig -a'
   return io.popen(cmd):read('*a')
@@ -37,6 +47,15 @@ function support.troubleshoot()
   uhttpd.send('======= INTERFACES =======\r\n')
   uhttpd.send(ifconfig())
   uhttpd.send('\r\n')
+  uhttpd.send('======= PORT 2 =======\r\n')
+  uhttpd.send(is_port2_plugged())
+  uhttpd.send('\r\n')
+  uhttpd.send('======= PORTS =======\r\n')
+  uhttpd.send('INTERFACE eth0.10 (POE)\r\n')
+  uhttpd.send(port('eth0.10'))
+  uhttpd.send('INTERFACE eth0.1 \r\n')
+  uhttpd.send(port('eth0.1'))
+  uhttpd.send('\r\n') 
   uhttpd.send('======= ROUTE =======\r\n')
   uhttpd.send(route())
   uhttpd.send('\r\n')
