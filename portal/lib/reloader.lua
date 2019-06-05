@@ -58,6 +58,12 @@ function r.bridge()
     nixio.syslog('err', cmd .. ' failed. Exit code: '
     .. s)
   end
+  local cmd = '/sbin/ifconfig bridge1 netmask 255.255.255.0'
+  local s = os.execute(cmd)
+  if s ~= 0 then
+    nixio.syslog('err', cmd .. ' failed. Exit code: '
+    .. s)
+  end
 end
 
 function r.hostapd(path)
