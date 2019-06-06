@@ -1,6 +1,11 @@
 
 support = {}
 
+function date()
+  cmd = '/bin/date'
+  return io.popen(cmd):read('*a')
+end
+
 function top()
   cmd = '/usr/bin/top -n1 -b'
   return io.popen(cmd):read('*a')
@@ -44,6 +49,9 @@ end
 function support.troubleshoot()
   uhttpd.send('Status: 200 OK\r\n')
   uhttpd.send('Content-Type: text/text\r\n\r\n')
+  uhttpd.send('======= DATE ======\r\n')
+  uhttpd.send(date())
+  uhttpd.send('\r\n')
   uhttpd.send('======= INTERFACES =======\r\n')
   uhttpd.send(ifconfig())
   uhttpd.send('\r\n')
