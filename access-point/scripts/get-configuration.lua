@@ -284,6 +284,28 @@ else
   nixio.syslog('info','portal page is up to date')
 end
 
+--- UPDATE SCHEDULE
+local old_schedule = data.ap.schedule
+local new_schedule = wp_resp['schedule']['on']..wp_resp['schedule']['off']
+if old_schedule ~= new_schedule then
+  local sed = "/bin/sed -ri '/(enable|disable)-wifi.lua/d' /etc/crontabs/root"
+  local x = os.execute(sed)
+  if x ~= 0 then
+    nixio.syslog('err',sed..' failed with exit code: '..x)
+  end
+  data.ap.schedule = new_schedule
+  local on = string.gsub(wp_resp['schedule']['on'],'%\\n','\n')
+  local off = string.gsub(wp_resp['schedule']['off'],'%\\n','\n')
+  f = io.open('/etc/crontabs/root','a')
+  f:write(on)
+  f:write(off)
+  f:close()
+  parser.save(ini_file,data)
+  os.execute('/etc/init.d/cron restart')
+else
+  nixio.syslog('info','schedule is up to date')
+end
+
 --- START SERVICES IF NOT STARTED
 local check = '/usr/bin/test -e /tmp/hostapd.0.pid'
 local s = os.execute(check)
