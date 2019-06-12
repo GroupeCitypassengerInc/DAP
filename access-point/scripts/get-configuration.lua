@@ -12,6 +12,7 @@ local parser = require 'LIP'
 local json   = require 'luci.jsonc'
 local nixio  = require 'nixio'
 local reload = require 'reloader'
+local fs     = require 'nixio.fs'
 
 ------------------------
 --------- GET CONFIG CITYSCOPE
