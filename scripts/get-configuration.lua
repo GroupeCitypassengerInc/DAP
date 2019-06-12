@@ -288,7 +288,7 @@ end
 local old_schedule = data.ap.schedule
 local new_schedule = wp_resp['schedule']['on']..wp_resp['schedule']['off']
 if old_schedule ~= new_schedule then
-  local sed = "/bin/sed -ri '/(enable|disable)-wifi.lua/d' /etc/crontabs/root"
+  local sed = "/bin/sed -ri '/(en|dis)able-wifi.lua/d' /etc/crontabs/root"
   local x = os.execute(sed)
   if x ~= 0 then
     nixio.syslog('err',sed..' failed with exit code: '..x)
@@ -297,8 +297,8 @@ if old_schedule ~= new_schedule then
   local on = string.gsub(wp_resp['schedule']['on'],'%\\n','\n')
   local off = string.gsub(wp_resp['schedule']['off'],'%\\n','\n')
   f = io.open('/etc/crontabs/root','a')
-  f:write(on)
   f:write(off)
+  f:write(on)
   f:close()
   parser.save(ini_file,data)
   os.execute('/etc/init.d/cron restart')
@@ -325,10 +325,9 @@ if s == 0 then
   if s ~= 0 then
     nixio.syslog('info','failed to kill hostapd support. Exit code: ' .. s)
   end
-  local cmd = '/bin/rm -f /tmp/hostapd.support.pid'
-  local s = os.execute(cmd)
-  if s ~= 0 then
-    nixio.syslog('err','failed to remove /tmp/hostapd.support.conf. Exit code: ' .. s)
+  local s = fs.remove('/tmp/hostapd.support.pid')
+  if s ~= true then
+    nixio.syslog('err','failed to remove /tmp/hostapd.support.conf')
   end
 end
 
