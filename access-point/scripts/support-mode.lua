@@ -7,17 +7,16 @@
 package.path = package.path .. ';/portal/lib/?.lua'
 nixio = require 'nixio'
 reload = require 'reloader'
+fs = require 'nixio.fs'
 
 -- Killall hostapd
-local cmd = '/bin/rm /tmp/hostapd.0.pid'
-local h = os.execute(cmd)
-if h ~= 0 then
-  nixio.syslog('warning','No /tmp/hostapd.0.pid file') 
+x = fs.remove('/tmp/hostapd.0.pid')
+if x ~= true then
+  nixio.syslog('warn','No hostapd 0 pid file to remove')
 end
-local cmd = '/bin/rm /tmp/hostapd.1.pid'
-local h = os.execute(cmd)
-if h ~= 0 then
-  nixio.syslog('warning','No /tmp/hostapd.1.pid file') 
+y = fs.remove('/tmp/hostapd.1.pid')
+if y ~= true then
+  nixio.syslog('warn','No hostapd 1 pid file to remove')
 end
 local cmd = '/usr/bin/killall hostapd'
 local s = os.execute(cmd)
