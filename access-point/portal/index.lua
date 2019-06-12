@@ -8,11 +8,20 @@ local support      = require "troubleshooting"
 local fs           = require "nixio.fs"
 
 function handle_request(env)
+  -- Return a troubleshooting page when AP has no internet.
   local a = os.execute('/usr/bin/test -e /tmp/internet')
   if a ~= 0 then
     support.troubleshoot()
     os.exit()
   end
+  
+  -- Return 503 when wifi is scheduled to be down.
+  local b = os.execute('/usr/bin/test -e /tmp/noaccess')
+  if b == 0 then
+    portal_proxy.no_wifi_503()
+    os.exit()
+  end  
+
   local query_string = env.QUERY_STRING	
 
   local user_ip   = env.REMOTE_ADDR
