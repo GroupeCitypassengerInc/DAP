@@ -29,6 +29,13 @@ function proxy.success()
   end
 end
 
+function proxy.no_wifi_503()
+  uhttpd.send("Status: 503 Service Unavailable.\r\n")
+  uhttpd.send("Content-Type: text/html\r\n")
+  uhttpd.send("\r\n\r\n")
+  uhttpd.send("Service unavailable. Please try later.")
+end
+
 function proxy.no_dhcp_lease()
   uhttpd.send("Status: 406 Not Acceptable.\r\n")
   uhttpd.send("Content-Type: text/html\r\n")
@@ -129,7 +136,7 @@ end
 
 function validate_data_on_server(user_ip,user_mac,secret,sid)
   local ap_secret = cst.ap_secret
-  local cmd  = CURL ..'"' ..  cst.PortalUrl .. '/index.php?digilan-token-action=validate&user_ip='
+  local cmd  = CURL ..'--retry 3 "' ..  cst.PortalUrl .. '/index.php?digilan-token-action=validate&user_ip='
   .. user_ip .. '&ap_mac='.. cst.ap_mac ..
   '&secret=' .. secret .. '&session_id=' .. sid ..'&digilan-token-secret=' .. ap_secret.. '"'
   local server_response = io.popen(cmd):read("*a")
