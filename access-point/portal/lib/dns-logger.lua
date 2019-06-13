@@ -89,19 +89,27 @@ function log.insert_log(date,domain,source)
   -- Get session id and secret to find user_id for this connection in WP tables.
   local cmd = '/usr/bin/find /var/localdb -name %s -type d'
   cmd = string.format(cmd,source)
-  local dir = io.popen(cmd):read('*l')
+  local d = io.popen(cmd)
+  local dir = d:read('*l')
+  d:close()
   if dir == nil then
     return false
   end
   local cmd = '/bin/ls %s'
   cmd = string.format(cmd,dir)
-  local sid = io.popen(cmd):read('*l')
+  local s = io.popen(cmd)
+  local sid = s:read('*l')
+  s:close()
   cmd = cmd .. '/%s'
   cmd = string.format(cmd,sid)
-  secret = io.popen(cmd):read('*l')
+  local sec = io.popen(cmd)
+  secret = sec:read('*l')
+  sec:close()
   cmd = cmd .. '/%s'
   cmd = string.format(cmd,secret)
-  user_id = io.popen(cmd):read('*l')
+  id = io.popen(cmd)
+  user_id = id:read('*l')
+  id:close()
   local row = '{\\"date\\": \\"%s\\", \\"user_id\\": \\"%s\\", \\"domain\\": \\"%s\\"}'
   local row = string.format(row,date,user_id,domain)
   f = io.open('/tmp/dns.data','a')
