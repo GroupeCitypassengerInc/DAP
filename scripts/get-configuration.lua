@@ -13,6 +13,7 @@ local json   = require 'luci.jsonc'
 local nixio  = require 'nixio'
 local reload = require 'reloader'
 local fs     = require 'nixio.fs'
+local helper = require 'helper'
 
 ------------------------
 --------- GET CONFIG CITYSCOPE
@@ -62,7 +63,7 @@ resp = nil
 if api_key == nil then
   resp = nil
 else
-  local cmd  = '/usr/bin/curl --retry 3 --retry-delay 20 -H "CityscopeApiKey: %s" ' .. 
+  local cmd  = '/usr/bin/curl --retry 3 --retry-delay 20 --fail -m 2 --connect-timeout 2 -s -H "CityscopeApiKey: %s" ' .. 
   '-H "accept: application/json" "https://preprod.citypassenger.com/ws/DAP/%s"'
   local cmd = string.format(cmd,api_key,mac)
   resp = io.popen(cmd):read('*a')
@@ -188,15 +189,22 @@ end
 
 --- SEND HOSTNAME TO WP
 
-local cmd = '/usr/bin/curl --retry 1 "%s/index.php?' ..
+local cmd = '/usr/bin/curl --retry 3 --retry-delay 5 --fail -m 2 --connect-timeout 2 -s -L "%s/index.php?' ..
 'digilan-token-action=add&digilan-token-secret=%s&hostname=%s"'
 local cmd = string.format(cmd,url,secret,hostname)
-local wp_reg = io.popen(cmd):read('*a')
-local wp_reg = json.parse(wp_reg)
-if wp_reg == nil then
-  nixio.syslog('err','failed to access wp api')
-  return false  
+
+while true do
+  response,exit = helper.command(cmd)
+  if exit ~= 0 then
+    nixio.syslog('err','cURL exit code: '..exit)
+    os.exit(1)
+  end
+  wp_reg = json.parse(response)
+  if wp_reg ~= nil then
+    break
+  end
 end
+
 if wp_reg['message'] == 'created' then
   nixio.syslog('info','hostname sent to wp')
 elseif wp_reg['message'] == 'exists' then
@@ -208,16 +216,20 @@ end
 
 --- GET SETTINGS FROM WORDPRESS
 
-local cmd = '/usr/bin/curl "%s/index.php?' ..
-'digilan-token-action=configure&digilan-token-secret=%s&hostname=%s" -s'
+local cmd = '/usr/bin/curl --retry 3 --retry-delay 5 --fail -m 2 --connect-timeout 2 -s -L "%s/index.php?' ..
+'digilan-token-action=configure&digilan-token-secret=%s&hostname=%s"'
 local cmd = string.format(cmd,url,secret,hostname)
-local wp_resp = io.popen(cmd):read('*a')
 
-wp_resp = json.parse(wp_resp)
-
-if wp_resp == nil then
-  nixio.syslog('err','Failed to get wordpress parameters.')
-  return false
+while true do
+  response,exit = helper.command(cmd)
+  if exit ~= 0 then
+    nixio.syslog('err','cURL exit code: '..exit)
+    os.exit(1)
+  end
+  wp_resp = json.parse(response)
+  if wp_resp ~= nil then
+    break
+  end
 end
 
 --- LOAD CURRENT INI FILE
