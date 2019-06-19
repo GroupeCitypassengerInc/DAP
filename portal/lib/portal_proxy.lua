@@ -6,11 +6,10 @@
 --
 local cst      = require "proxy_constants"
 local ut       = require "check"
-local protocol = require "luci.http.protocol"
-local data     = require "luci.cbi.datatypes"
 local json     = require "luci.jsonc"
 local nixio    = require "nixio"
 local fs       = require "nixio.fs"
+local helper   = require "helper"
 local proxy    = {}
 local CURL     = "/usr/bin/curl "
 
@@ -46,18 +45,21 @@ end
 function proxy.initialize_redirected_client(user_ip,user_mac)
   -- Send a request to server
   local ap_secret = cst.ap_secret
-  local cmd = CURL ..'--retry 3 "' .. cst.PortalUrl .. 
+  local cmd = CURL ..
+  '--retry 3 --retry-delay 5 --fail -m 2 --connect-timeout 2 -s -L "' .. 
+  cst.PortalUrl .. 
   '/index.php?digilan-token-action=create&user_ip=' .. 
   user_ip ..'&ap_mac=' .. cst.ap_mac .. 
   '&digilan-token-secret=' .. ap_secret .. '"'
   -- server responds with secret and sid
-  local server_response = io.popen(cmd):read("*a")
-  local response        = json.parse(server_response)
+  response,exit = helper.command(cmd)
+  if exit ~= 0 then
+    nixio.syslog('err','connection create: cURL failed with exit code: '..exit)
+    return false
+  end
+  response = json.parse(response)
   
-  if response.validated == nil then
-    uhttpd.send("Status: 400 Bad Request\r\n")
-    uhttpd.send("Content-Type: text/html\r\n")
-    uhttpd.send("\r\n\r\n")
+  if response == nil then
     local cmd = "/bin/rm -rf " .. cst.localdb .. "/" .. user_mac
     local x = os.execute(cmd)
     if x ~= 0 then
@@ -115,7 +117,7 @@ function proxy.validate(user_mac,user_ip,sid,secret)
   end
   local params = {cst.localdb,user_mac,user_ip,sid,secret}
   local path   = table.concat(params,"/")
-  local mkdir  = fs.mkdirr(path .. "/" .. user_id)
+  local mkdir  = fs.mkdir(path .. "/" .. user_id)
   if mkdir == true then
     local cmd_auth = "/usr/sbin/iptables -t nat -I PREROUTING -p udp -s " ..user_ip ..                         
     " -m mac --mac-source " .. user_mac .. " --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
@@ -128,21 +130,33 @@ function proxy.validate(user_mac,user_ip,sid,secret)
   else
     local errno = nixio.errno()
     local errmsg = nixio.strerror(errno)
+    if errno == 17 then
+      return true
+    end
     nixio.syslog("err", errno .. ": " .. errmsg)
     return false
   end
-  return true
 end
 
 function validate_data_on_server(user_ip,user_mac,secret,sid)
   local ap_secret = cst.ap_secret
-  local cmd  = CURL ..'--retry 3 "' ..  cst.PortalUrl .. '/index.php?digilan-token-action=validate&user_ip='
+  local cmd  = CURL ..'--retry 3 --retry-delay 5 --fail -m 2 --connect-timeout 2 -s -L "' 
+  ..  cst.PortalUrl .. '/index.php?digilan-token-action=validate&user_ip='
   .. user_ip .. '&ap_mac='.. cst.ap_mac ..
   '&secret=' .. secret .. '&session_id=' .. sid ..'&digilan-token-secret=' .. ap_secret.. '"'
-  local server_response = io.popen(cmd):read("*a")
-  local response        = json.parse(server_response)
-  local r               = response.authenticated
-  local user_id 	= response.user_id
+  while true do
+    response,exit = helper.command(cmd)
+    if exit ~= 0 then
+      nixio.syslog('err','validate. cURL failed with exit code:'..exit)
+      return false
+    end
+    response = json.parse(response)
+    if response ~= nil then
+      break
+    end
+  end
+  local r = response.authenticated
+  local user_id	= response.user_id
   if r == true then
     return user_id
   end
@@ -153,8 +167,9 @@ function proxy.deauthenticate_user(user_ip,user_mac)
   local cmd = "/usr/sbin/iptables -t nat -D PREROUTING -p udp -s " ..user_ip .. 
   " -m mac --mac-source " .. user_mac .. " --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
   local x = os.execute(cmd)
-  if x == 512 then
-    nixio.syslog("warning",cmd .. " failed with exit code 512")
+  local x = x / 256
+  if x == 2 then
+    nixio.syslog("warning",cmd .. " failed with exit code "..x)
   end
   local cmd = "/bin/rm -rf " .. cst.localdb .. "/" .. user_mac
   local y = os.execute(cmd)
@@ -168,15 +183,14 @@ function proxy.status_user(user_ip,user_mac)
   local params    = {cst.localdb,user_mac,user_ip}
   local select_db = table.concat(params,"/")
   local cmd_sid   = "/bin/ls " .. select_db
-  local x = os.execute(cmd_sid .. " &> /dev/null")
+  local sid_db,x = helper.command(cmd_sid)
   if x ~= 0 then
     return "Lease. Not in localdb"
   end
-  local sid_db    = io.popen(cmd_sid):read("*l")
   if sid_db == nil then
     return "Lease. Not in localdb"
   end
-  local cmd_secret = "/bin/ls " .. select_db .."/" .. sid_db 
+  local cmd_secret = cmd_sid .. "/" .. sid_db
   local secret_db  = io.popen(cmd_secret):read("*l")
   user_mac         = string.upper(user_mac)
   local cmd = "/usr/sbin/iptables-save | /bin/grep 'A PREROUTING -s %s/32 -p udp -m mac --mac-source %s' > /dev/null"
