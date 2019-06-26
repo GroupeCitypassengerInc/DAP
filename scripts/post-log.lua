@@ -45,7 +45,8 @@ local curl = string.format(curl,data,cst.PortalUrl,cst.ap_secret)
 local x = os.execute(curl)
 if x == 0 then
   nixio.syslog('info','DNS logs posted to ' .. cst.PortalUrl .. '.')
+  remove(fpath,1,c)
 else
   nixio.syslog('warning','cURL POST failed.')
 end
-remove(fpath,1,c)
+os.exit()
