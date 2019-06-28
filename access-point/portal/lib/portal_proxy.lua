@@ -29,10 +29,11 @@ function proxy.success()
 end
 
 function proxy.no_wifi_503()
-  uhttpd.send("Status: 503 Service Unavailable.\r\n")
-  uhttpd.send("Content-Type: text/html\r\n")
-  uhttpd.send("\r\n\r\n")
-  uhttpd.send("Service unavailable. Please try later.")
+  if cst.error_page == nil then
+    redirect(cst.PortalUrl .. "/")
+  else 
+    redirect(cst.error_page)
+  end
 end
 
 function proxy.no_dhcp_lease()
