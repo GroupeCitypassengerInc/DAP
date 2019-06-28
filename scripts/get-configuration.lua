@@ -54,6 +54,7 @@ local data =
   {
     url='',
     landing_page='',
+    error_page='',
     page=''
   }
 }
@@ -297,6 +298,18 @@ else
   nixio.syslog('info','portal page is up to date')
 end
 
+--- Update error page
+local error_page = data.portal.error_page
+local new_error_page = wp_resp['error_page']
+if error_page ~= new_error_page then
+  data.portal.error_page = new_error_page
+  parser.save(ini_file,data)
+  nixio.syslog('info','error page updated')
+  reload.uhttpd()
+else
+  nixio.syslog('info','error page is up to date')
+end
+
 --- UPDATE SCHEDULE
 local old_schedule = data.ap.schedule
 local new_schedule = wp_resp['schedule']['on']..wp_resp['schedule']['off']
@@ -310,8 +323,8 @@ if old_schedule ~= new_schedule then
   local on = string.gsub(wp_resp['schedule']['on'],'%\\n','\n')
   local off = string.gsub(wp_resp['schedule']['off'],'%\\n','\n')
   f = io.open('/etc/crontabs/root','a')
-  f:write(off)
   f:write(on)
+  f:write(off)
   f:close()
   parser.save(ini_file,data)
   os.execute('/etc/init.d/cron restart')

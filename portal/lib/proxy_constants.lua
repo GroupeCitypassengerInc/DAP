@@ -22,6 +22,7 @@ function constants.__init__()
   else
     constants.PortalPage = constants.PortalUrl
   end
+  constants.error_page = ini_conf_data.portal.error_page
 end
 
 constants.__init__()
