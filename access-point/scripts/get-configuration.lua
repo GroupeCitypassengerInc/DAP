@@ -8,12 +8,14 @@
 --]]
 
 package.path = package.path .. ';/portal/lib/?.lua'
+package.path = package.path .. ';/scripts/lib/?.lua'
 local parser = require 'LIP'
 local json   = require 'luci.jsonc'
 local nixio  = require 'nixio'
 local reload = require 'reloader'
 local fs     = require 'nixio.fs'
 local helper = require 'helper'
+local bssid  = require 'bssid-helper'
 
 ------------------------
 --------- GET CONFIG CITYSCOPE
@@ -31,10 +33,6 @@ local path_addr = '/sys/devices/platform/ag71xx.0/net/eth0/address'
 local ini_file = '/etc/proxy.ini'
 local mac = io.popen('/bin/cat ' .. path_addr):read('*l')
 local api_key = io.popen('/bin/cat /root/.ssh/apikey'):read('*l')
-local base_bssid = '70:b3:d5:e7:e'
-local m = string.sub(mac,14,17)
-local mask = string.gsub(m,':','')
-local mask = '0x' .. mask
 local get_hostname = '/sbin/uci get system.@system[0].hostname'
 local hostname = io.popen(get_hostname):read('*l')
 local data =
@@ -110,13 +108,6 @@ else
   end
 end
 
-local function format_mask(s)
-  while (string.len(s) < 3) do
-    s = '0' .. s
-  end
-  return s
-end
-
 --- UPDATE HOSTAPD HEADER (HARDWARE CONFIGURATION)
 local hardware_new = ''
 local hardware_now = ''
@@ -137,12 +128,7 @@ if hardware_now ~= hardware_new then
   os.execute('/bin/sleep 1')
   local i = 0
   for hostapd_file,conf in pairs(resp['files']) do
-    mask = (mask + i) % 4096
-    local n = mask
-    local s = string.format('%x',n)
-    local s = format_mask(s)
-    local suffix = string.sub(s,1,1) .. ":" .. string.sub(s,2,3)
-    local bssid = base_bssid .. suffix
+    local bssid = bssid.get_bssid(i)
     f = io.open(hostapd_file,'w')
     f:write(conf)
     f:write('bssid=' .. bssid.. '\nbridge=bridge1\nssid=Borne Autonome')
