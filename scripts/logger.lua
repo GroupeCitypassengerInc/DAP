@@ -5,8 +5,7 @@
 -- a remote database.                   
 --                                       
 ]]-- 
-
-package.path = package.path .. ';/portal/lib/?.lua'
+package.path = package.path .. ';/scripts/lib/?.lua'
 log = require 'dns-logger'
 
 local fifo = io.popen('/bin/cat /tmp/dns.log','r')
