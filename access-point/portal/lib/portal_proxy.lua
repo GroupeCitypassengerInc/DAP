@@ -47,7 +47,7 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
   -- Send a request to server
   local ap_secret = cst.ap_secret
   local cmd = CURL ..
-  '--retry 3 --retry-delay 5 --fail -m 2 --connect-timeout 2 -s -L "' .. 
+  '--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "' .. 
   cst.PortalUrl .. 
   '/index.php?digilan-token-action=create&user_ip=' .. 
   user_ip ..'&ap_mac=' .. cst.ap_mac .. 
@@ -141,7 +141,7 @@ end
 
 function validate_data_on_server(user_ip,user_mac,secret,sid)
   local ap_secret = cst.ap_secret
-  local cmd  = CURL ..'--retry 3 --retry-delay 5 --fail -m 2 --connect-timeout 2 -s -L "' 
+  local cmd  = CURL ..'--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "' 
   ..  cst.PortalUrl .. '/index.php?digilan-token-action=validate&user_ip='
   .. user_ip .. '&ap_mac='.. cst.ap_mac ..
   '&secret=' .. secret .. '&session_id=' .. sid ..'&digilan-token-secret=' .. ap_secret.. '"'

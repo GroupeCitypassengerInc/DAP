@@ -40,7 +40,7 @@ for s in content:gmatch('[^\r\n]+') do
   c = c + 1
 end
 data = table.concat(dns,",")
-local curl = '/usr/bin/curl --retry 3 --retry-delay 5 --fail -m 2 --connect-timeout 2 -s -L --post301 -d "[ %s ]" "%s/index.php?digilan-token-action=write&digilan-token-secret=%s"'
+local curl = '/usr/bin/curl --retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L --post301 -d "[ %s ]" "%s/index.php?digilan-token-action=write&digilan-token-secret=%s"'
 local curl = string.format(curl,data,cst.PortalUrl,cst.ap_secret)
 local x = os.execute(curl)
 if x == 0 then
