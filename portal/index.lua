@@ -29,7 +29,6 @@ function handle_request(env)
   local get_mac   = "/scripts/get-mac-client " .. user_ip
  
   local user_mac  = io.popen(get_mac):read("*a")
- 
   if user_mac == "" then
     portal_proxy.no_dhcp_lease()
     os.exit()
@@ -41,11 +40,8 @@ function handle_request(env)
     ap_mac=ap_mac, 
     portal_url=cst.PortalUrl
   }
-
   local data = json.stringify(table_data)
-
   local c = protocol.urldecode(string.sub(env.REQUEST_URI,2))
-  
   if c == "test" then
     portal_proxy.print_data(data)
     return true
@@ -54,7 +50,6 @@ function handle_request(env)
   local params = protocol.urldecode_params(query_string)
   local sid    = params['session_id']
   local secret = params['secret']
-
   if portal_proxy.validate(user_mac,user_ip,sid,secret) == true then
     portal_proxy.success()
     return true
