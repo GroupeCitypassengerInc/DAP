@@ -2,7 +2,6 @@
 
 file=/tmp/dns.data
 maxsize=50
-
 while true; do
   current_size=$(du -k $file | cut -f1)
   if [ $current_size -ge $maxsize ]; then
@@ -12,4 +11,3 @@ while true; do
     sleep 5
   fi
 done
-
