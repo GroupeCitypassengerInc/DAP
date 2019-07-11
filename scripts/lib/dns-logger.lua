@@ -6,9 +6,10 @@
 ]]--
 
 log = {}
-
+package.path = package.path .. ';/scripts/lib/?.lua'
 local data  = require 'luci.cbi.datatypes'
 local nixio = require 'nixio'
+local helper = require 'lease_file_reader'
 
 function log.is_dns_query(line)
   local re = 'query%[A%]'
@@ -16,22 +17,13 @@ function log.is_dns_query(line)
   return s == 'query[A]'
 end
 
-function split_line(line)
-  words = {}
-  local re = '[%w.-]+'
-  for w in string.gmatch(line, re) do
-    table.insert(words, w)
-  end
-  return words
-end
-
 function log.get_domain(line)
-  local t = split_line(line)
+  local t = helper.split_line(line,'[%w.-]+')
   return t[10]
 end
 
 function log.get_source_ip(line)
-  local t = split_line(line)
+  local t = helper.split_line(line,'[%w.-]+')
   return t[12]
 end
 
@@ -42,7 +34,7 @@ end
 
 -- Extracts and parse date time from log line with a YYYY-MM-DD HH:mm:ss format
 function log.get_date(line)
-  local t = split_line(line)
+  local t = helper.split_line(line,'[%w.-]+')
   local d = {}
   local y = os.date('%Y') -- Year
   local m = get_month(t[1])
