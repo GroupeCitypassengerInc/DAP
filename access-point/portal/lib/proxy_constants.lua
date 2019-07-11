@@ -17,8 +17,8 @@ function constants.__init__()
   constants.localdb    = ini_conf_data.localdb.path
   constants.ap_secret  = ini_conf_data.ap.secret
   constants.landing_page = ini_conf_data.portal.landing_page
-  if ini_conf_data.portal.page ~= nil then
-    constants.PortalPage = ini_conf_data.portal.page
+  if ini_conf_data.portal.portal_page ~= nil then
+    constants.PortalPage = ini_conf_data.portal.portal_page
   else
     constants.PortalPage = constants.PortalUrl
   end
