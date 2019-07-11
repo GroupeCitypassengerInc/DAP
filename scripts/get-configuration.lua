@@ -9,13 +9,14 @@
 
 package.path = package.path .. ';/portal/lib/?.lua'
 package.path = package.path .. ';/scripts/lib/?.lua'
-local parser = require 'LIP'
+parser = require 'LIP'
 local json   = require 'luci.jsonc'
 local nixio  = require 'nixio'
 local reload = require 'reloader'
 local fs     = require 'nixio.fs'
 local helper = require 'helper'
 local bssid  = require 'bssid-helper'
+local ini    = require 'check_config_changes'
 
 ------------------------
 --------- GET CONFIG CITYSCOPE
@@ -25,7 +26,6 @@ local bssid  = require 'bssid-helper'
 --  GENERATE INI FILE
 --
 --]]
-
 
 -- API Call - GET /ws/DAP/{mac}
  
@@ -53,7 +53,7 @@ local data =
     url='',
     landing_page='',
     error_page='',
-    page=''
+    portal_page=''
   }
 }
 
@@ -257,48 +257,25 @@ if tonumber(wp_resp['timeout']) == nil then
   nixio.syslog('err',wp_resp['timeout'] .. ' is not a number.')
   return false
 end
-if data.ap.timeout ~= wp_resp['timeout'] then
-  data.ap.timeout = wp_resp['timeout']
-  parser.save(ini_file,data)
-else
-  nixio.syslog('info','timeout is up to date')
-end
 
---- Update landing page
-current_landing_page = data.portal.landing_page
-new_landing_page = wp_resp['landing_page']
-if current_landing_page ~= new_landing_page then
-  data.portal.landing_page = new_landing_page
-  parser.save(ini_file,data)
-  nixio.syslog('info','landing page updated')
-  reload.uhttpd()
-else
-  nixio.syslog('info','landing page is up to date')
-end
+old = data.ap.timeout
+new = wp_resp['timeout']
+ini.update_config(old,new,data,'ap','timeout')
 
---- INCLUDE PORTAL PAGE
-local portal_page = data.portal.page
-local new_portal_page = wp_resp['portal_page']
-if portal_page ~= new_portal_page then
-  data.portal.page = new_portal_page
-  parser.save(ini_file,data)
-  nixio.syslog('info','portal login page updated')
-  reload.uhttpd()
-else
-  nixio.syslog('info','portal page is up to date')
-end
+old = data.portal.landing_page
+new = wp_resp['landing_page']
+res = ini.update_config(old,new,data,'portal','landing_page')
+if res then reload.uhttpd() end
 
---- Update error page
-local error_page = data.portal.error_page
-local new_error_page = wp_resp['error_page']
-if error_page ~= new_error_page then
-  data.portal.error_page = new_error_page
-  parser.save(ini_file,data)
-  nixio.syslog('info','error page updated')
-  reload.uhttpd()
-else
-  nixio.syslog('info','error page is up to date')
-end
+old = data.portal.portal_page
+new = wp_resp['portal_page']
+res = ini.update_config(old,new,data,'portal','portal_page')
+if res then reload.uhttpd() end
+
+old = data.portal.error_page
+new = wp_resp['error_page']
+res = ini.update_config(old,new,data,'portal','error_page')
+if res then reload.uhttpd() end
 
 --- UPDATE SCHEDULE
 local old_schedule = data.ap.schedule
@@ -308,6 +285,7 @@ if old_schedule ~= new_schedule then
   local x = os.execute(sed)
   if x ~= 0 then
     nixio.syslog('err',sed..' failed with exit code: '..x)
+    os.exit(x)
   end
   data.ap.schedule = new_schedule
   local on = string.gsub(wp_resp['schedule']['on'],'%\\n','\n')
