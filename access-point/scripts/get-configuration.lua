@@ -181,8 +181,8 @@ end
 --- SEND HOSTNAME TO WP
 
 local cmd = '/usr/bin/curl --retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "%s/index.php?' ..
-'digilan-token-action=add&digilan-token-secret=%s&hostname=%s"'
-local cmd = string.format(cmd,url,secret,hostname)
+'digilan-token-action=add&digilan-token-secret=%s&hostname=%s&mac=%s"'
+local cmd = string.format(cmd,url,secret,hostname,mac)
 
 while true do
   response,exit = helper.command(cmd)

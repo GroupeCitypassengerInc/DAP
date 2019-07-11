@@ -7,10 +7,12 @@
 --]]
 
 package.path       = package.path .. ";/portal/lib/?.lua;/scripts/?.lua"
+package.path       = package.path .. ";/scripts/lib/?.lua"
 local cst          = require "proxy_constants"
 local portal_proxy = require "portal_proxy"
 uhttpd             = require "uhttpd"
 local data         = require "luci.cbi.datatypes"
+local lease        = require "lease_file_reader"
 
 local option   = arg[1]
 local user_ip  = arg[2]
@@ -37,38 +39,14 @@ local function verify_arguments(user_ip,user_mac)
   return true
 end
 
-local function split_line(line)
-  words = {}
-  re = "[%w.:%-%_]+"
-  for word in string.gmatch(line,re) do
-    table.insert(words,word)
-  end
-  return words
-end
-
-local function get_mac(line)
-  local t = split_line(line)
-  return t[2]
-end 
-
-local function get_ip(line)
-  local t = split_line(line)
-  return t[3]
-end
-
-local function get_hostname(line)
-  local t = split_line(line)
-  return t[4]
-end
-
 if option == "list" then
   local path_dhcp   = "/tmp/dhcp.leases"
   local dhcp_leases = io.open("/tmp/dhcp.leases")
   print("Mac address\t\tIP address\tHostname\tStatus")
   for line in dhcp_leases:lines() do 
-    local mac = get_mac(line)
-    local ip = get_ip(line)
-    local hostname = get_hostname(line)
+    local mac = lease.get_mac(line)
+    local ip = lease.get_ip(line)
+    local hostname = lease.get_hostname(line)
     local status = portal_proxy.status_user(ip,mac)
     print(mac .. "\t" .. ip .. "\t" .. hostname .. "\t" .. status)
   end

@@ -1,33 +1,16 @@
 #!/usr/bin/lua
 package.path       = package.path .. ";/portal/lib/?.lua"
+package.path       = package.path .. ";/scripts/lib/?.lua"
 local portal_proxy = require "portal_proxy"
 local cst	   = require "proxy_constants"
 local nixio        = require "nixio"
-
-function split_line(line)
-  words = {}
-  re = "[%w.:]+"
-  for word in string.gmatch(line,re) do
-    table.insert(words,word)
-  end
-  return words
-end
-
-function get_mac(line)
-  local t = split_line(line)
-  return t[2]
-end
-
-function get_ip(line)
-  local t = split_line(line)
-  return t[3]
-end
+local lease        = require "lease_file_reader"
 
 local path_dhcp = "/tmp/dhcp.leases"
 local dhcp_leases = io.open("/tmp/dhcp.leases")
 for line in dhcp_leases:lines() do
-  local mac = get_mac(line) 
-  local ip  = get_ip(line)
+  local mac = lease.get_mac(line) 
+  local ip  = lease.get_ip(line)
   local status = portal_proxy.status_user(ip,mac)
   if status == "Authenticated" then
     local cmd = "/usr/bin/find /var/localdb/%s/%s -name '*' -type d -mindepth 3"
