@@ -71,11 +71,28 @@ function r.hostapd(path)
   local pid_path = string.gsub(p,'conf','pid')
   local cmd = '/usr/sbin/hostapd -B -P %s %s'
   local cmd = string.format(cmd,pid_path,path)
+  if path == '/etc/hostapd.0.conf' then
+    wlanif = 'wlan0'
+  elseif path == '/etc/hostapd.1.conf' then
+    wlanif = 'wlan1'
+  elseif path == '/etc/hostapd.support.conf' then
+    wlanif = 'wlan1'
+  else
+    nixio.syslog('err','No wlan iface')
+    return false
+  end
   while true do
     local h = os.execute(cmd)
     if h == 0 then
+      rc = '/usr/sbin/brctl addif bridge1 ' .. wlanif
+      os.execute(rc)
       break
     else
+      pid = io.popen('/bin/cat ' .. pid_path):read('*l')
+      if pid ~= nil then
+        rc = '/bin/kill ' .. pid
+      end
+      os.execute(rc)
       nixio.syslog('err',cmd .. ' failed. Exit code: '
       .. h)
       os.execute('/bin/sleep 10')
