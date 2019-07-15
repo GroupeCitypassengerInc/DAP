@@ -91,8 +91,8 @@ function r.hostapd(path)
       pid = io.popen('/bin/cat ' .. pid_path):read('*l')
       if pid ~= nil then
         rc = '/bin/kill ' .. pid
+        os.execute(rc)
       end
-      os.execute(rc)
       nixio.syslog('err',cmd .. ' failed. Exit code: '
       .. h)
       os.execute('/bin/sleep 10')
