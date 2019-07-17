@@ -66,38 +66,58 @@ function r.bridge()
   end
 end
 
-function r.hostapd(path)
-  local p = string.gsub(path,'etc','tmp')
-  local pid_path = string.gsub(p,'conf','pid')
-  local cmd = '/usr/sbin/hostapd -B -P %s %s'
-  local cmd = string.format(cmd,pid_path,path)
+function get_wlanif(path)
   if path == '/etc/hostapd.0.conf' then
-    wlanif = 'wlan0'
+    return 'wlan0'
   elseif path == '/etc/hostapd.1.conf' then
-    wlanif = 'wlan1'
+    return 'wlan1'
   elseif path == '/etc/hostapd.support.conf' then
-    wlanif = 'wlan1'
+    return 'wlan1'
   else
     nixio.syslog('err','No wlan iface')
     return false
   end
+end
+
+function r.retry_hostapd(path)
+  local wlanif = get_wlanif(path)
+  if wlanif == false then
+    return false
+  end
   while true do
-    local h = os.execute(cmd)
-    if h == 0 then
-      rc = '/usr/sbin/brctl addif bridge1 ' .. wlanif
-      os.execute(rc)
+    s = start_hostapd(path)
+    if s == true then
+      addif_br(wlanif)
       break
     else
-      pid = io.popen('/bin/cat ' .. pid_path):read('*l')
-      if pid ~= nil then
-        rc = '/bin/kill ' .. pid
-        os.execute(rc)
-      end
-      nixio.syslog('err',cmd .. ' failed. Exit code: '
-      .. h)
+      kill_hostapd(path)
       os.execute('/bin/sleep 10')
-    end
+    end    
   end
+end
+
+function kill_hostapd(path)
+  local p = string.gsub(path,'etc','tmp')
+  local pid_path = string.gsub(p,'conf','pid')
+  pid = io.popen('/bin/cat ' .. pid_path):read('*l')
+  if pid ~= nil then
+    rc = '/bin/kill ' .. pid
+    os.execute(rc)
+  end
+end
+
+function addif_br(wlanif)
+  rc = '/usr/sbin/brctl addif bridge1 ' .. wlanif
+  os.execute(rc)
+end
+
+function start_hostapd(path)
+  local p = string.gsub(path,'etc','tmp')
+  local pid_path = string.gsub(p,'conf','pid')
+  local cmd = '/usr/sbin/hostapd -B -P %s %s'
+  local cmd = string.format(cmd,pid_path,path)
+  local h = os.execute(cmd)
+  return h == 0
 end
 
 return r
