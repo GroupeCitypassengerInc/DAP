@@ -15,10 +15,10 @@ function handle_request(env)
     os.exit()
   end
   
-  -- Return 503 when wifi is scheduled to be down.
+  -- Return a wordpress error page when wifi is scheduled to be down.
   local b = os.execute('/usr/bin/test -e /tmp/noaccess')
   if b == 0 then
-    portal_proxy.no_wifi_503()
+    portal_proxy.no_wifi()
     os.exit()
   end  
 
