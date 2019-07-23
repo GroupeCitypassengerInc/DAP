@@ -28,11 +28,13 @@ function proxy.success()
   end
 end
 
-function proxy.no_wifi_503()
+function proxy.no_wifi()
+  local cmd = "/sbin/uci get system.@system[0].hostname"
+  local hostname = io.popen(cmd):read("*l")
   if cst.error_page == nil then
     redirect(cst.PortalUrl .. "/")
   else 
-    redirect(cst.error_page)
+    redirect(cst.error_page .. "?hostname=" .. hostname)
   end
 end
 
