@@ -122,14 +122,7 @@ function proxy.validate(user_mac,user_ip,sid,secret)
   local path   = table.concat(params,"/")
   local mkdir  = fs.mkdir(path .. "/" .. user_id)
   if mkdir == true then
-    local cmd_auth = "/usr/sbin/iptables -t nat -I PREROUTING -p udp -s " ..user_ip ..                         
-    " -m mac --mac-source " .. user_mac .. " --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
-    local a = os.execute(cmd_auth)
-    if a ~= 0 then
-      nixio.syslog("err", cmd_auth .. " failed with exit code: " .. a)
-      return false
-    end
-    return true
+    return authorize_access_iptables(user_ip,user_mac)
   else
     local errno = nixio.errno()
     local errmsg = nixio.strerror(errno)
@@ -180,6 +173,55 @@ function proxy.deauthenticate_user(user_ip,user_mac)
     nixio.syslog("err",cmd .. " failed with exit code: " .. y)
     return false
   end
+end
+
+function proxy.reauthenticate_user(user_ip,user_mac,sid,secret,date_auth,user_id)
+  local insert = ut.insert_localdb(user_mac,user_ip,sid,secret)
+  if insert == false then
+    return false
+  end
+  local params = {cst.localdb,user_mac,user_ip,sid,secret}
+  local path = table.concat(params,"/")
+  local mkdir = fs.mkdir(path .. "/" .. user_id)
+  if mkdir == false then
+    nixio.syslog("warning","Failed to create user_id dir")
+    return false
+  end
+  path = path .. "/" .. user_id
+  local dirtime =  fs.utimes(path,date_auth)
+  if dirtime == false then
+    nixio.syslog("err","Failed to set date on localdb file")
+    return false
+  end
+  return authorize_access_iptables(user_ip,user_mac)
+end
+
+function authorize_access_iptables(user_ip,user_mac)
+  local cmd_auth = "/usr/sbin/iptables -t nat -I PREROUTING -p udp -s " ..user_ip ..                         
+  " -m mac --mac-source " .. user_mac .. " --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
+  local a = os.execute(cmd_auth)
+  if a ~= 0 then
+    nixio.syslog("err", cmd_auth .. " failed with exit code: " .. a)
+    return false
+  end
+  return true
+end
+
+function proxy.has_user_been_connected(mac)
+  local cmd  = CURL ..'--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "'                          
+  ..  cst.PortalUrl .. '/index.php?digilan-token-action=reauth&mac='.. mac ..                                          
+  '&digilan-token-secret=' .. cst.ap_secret.. '"'
+  while true do
+    local connection,exit = helper.command(cmd)
+    if exit == 0 then
+      connection = json.parse(connection)
+      return connection
+    else
+      nixio.syslog("err",cmd .. " failed with exit code: " .. exit)
+      break
+    end
+  end
+  return false
 end
 
 function proxy.status_user(user_ip,user_mac)
