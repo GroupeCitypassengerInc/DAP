@@ -57,6 +57,39 @@ function handle_request(env)
 
   local status = portal_proxy.status_user(user_ip,user_mac)
   
+  -- REAUTH CODE BEGIN
+  local connected = portal_proxy.has_user_been_connected(user_mac)
+  if connected == false then
+    nixio.syslog("err","Failed to get user status from db")
+    return false
+  end
+  if connected["authenticated"] then
+    -- If user has been pre authenticated on this AP but then has authenticated on another AP
+    if status == "User in localdb" then
+      local find = "/usr/bin/find /var/localdb/%s -name '*' -type d -mindepth 3"
+      find = string.format(find,user_mac)
+      local path = io.popen(find):read("*l")
+      local remove = "/bin/rm -rf /var/localdb/" .. user_mac
+      s = os.execute(remove)
+      if s ~= 0 then
+        nixio.syslog("err","Failed to remove /var/localdb/" .. mac)
+        return false
+      end 
+    end
+    local sid = connected["sessionid"]
+    local secret = connected["secret"]
+    local user_id = connected["user_id"]
+    local date_auth = connected["ap_validation"]
+    portal_proxy.reauthenticate_user(user_ip,user_mac,sid,secret,date_auth,user_id)
+    return true
+  end
+  -- REAUTH CODE END
+
+  if status == "Authenticated" then
+    redirect(cst.PortalUrl .. "/index.php")
+    return true
+  end
+
   if status == "User in localdb" then
     local params    = {cst.localdb,user_mac,user_ip}
     local select_db = table.concat(params,"/")
@@ -65,11 +98,6 @@ function handle_request(env)
     local rdrinfo   = "session_id=" .. sid_db .. "&mac=" .. user_mac      
     redirect(cst.PortalPage .. "?" .. rdrinfo)
     return true                                                                               
-  end
-
-  if status == "Authenticated" then
-    redirect(cst.PortalUrl .. "/index.php")
-    return true
   end
  
   local path_db = cst.localdb .. "/" .. user_mac
