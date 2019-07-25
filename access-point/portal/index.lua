@@ -56,6 +56,11 @@ function handle_request(env)
   end
 
   local status = portal_proxy.status_user(user_ip,user_mac)
+
+  if status == "Authenticated" then
+    redirect(cst.PortalUrl .. "/index.php")
+    return true
+  end
   
   -- REAUTH CODE BEGIN
   local connected = portal_proxy.has_user_been_connected(user_mac)
@@ -84,11 +89,6 @@ function handle_request(env)
     return true
   end
   -- REAUTH CODE END
-
-  if status == "Authenticated" then
-    redirect(cst.PortalUrl .. "/index.php")
-    return true
-  end
 
   if status == "User in localdb" then
     local params    = {cst.localdb,user_mac,user_ip}
