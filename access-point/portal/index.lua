@@ -79,7 +79,7 @@ function handle_request(env)
     local sid = connected["sessionid"]
     local secret = connected["secret"]
     local user_id = connected["user_id"]
-    local date_auth = connected["ap_validation"]
+    local date_auth = tonumber(connected["ap_validation"])
     portal_proxy.reauthenticate_user(user_ip,user_mac,sid,secret,date_auth,user_id)
     return true
   end
