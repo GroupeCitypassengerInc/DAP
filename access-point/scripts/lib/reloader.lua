@@ -87,13 +87,21 @@ function r.retry_hostapd(path)
   while true do
     s = start_hostapd(path)
     if s == true then
-      addif_br(wlanif)
-      break
+      if is_wlan_up(wlanif) then
+        addif_br(wlanif)
+        break
+      end
     else
       kill_hostapd(path)
       os.execute('/bin/sleep 10')
     end    
   end
+end
+
+function is_wlan_up(wlanif)
+  local cmd = '/sbin/ip a | /bin/grep "state UP" | /bin/grep ' .. wlanif
+  local res = os.execute(cmd)
+  return res == 0
 end
 
 function kill_hostapd(path)
