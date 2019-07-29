@@ -193,7 +193,12 @@ function proxy.reauthenticate_user(user_ip,user_mac,sid,secret,date_auth,user_id
     nixio.syslog("err","Failed to set date on localdb file")
     return false
   end
-  return authorize_access_iptables(user_ip,user_mac)
+  local chain_exists = "/usr/sbin/iptables-save | /bin/grep 'A PREROUTING -s %s/32 -p udp -m mac --mac-source %s' > /dev/null"
+  chain_exists = string.format(chain_exists,user_ip,user_mac)
+  local res = os.execute(chain_exists)
+  if res ~= 0 then
+    return authorize_access_iptables(user_ip,user_mac)
+  end
 end
 
 function authorize_access_iptables(user_ip,user_mac)

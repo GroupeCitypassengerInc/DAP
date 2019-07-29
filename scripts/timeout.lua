@@ -38,5 +38,13 @@ for line in dhcp_leases:lines() do
       nixio.syslog("info","Timeout for user " .. mac .. ".\n")
     end
   end
+  if status == "Lease. Not in localdb" then
+    local cmd = "/usr/sbin/iptables-save | /bin/grep 'A PREROUTING -s %s/32 -p udp -m mac --mac-source %s' > /dev/null"
+    cmd = string.format(cmd,ip,mac)
+    local res = os.execute(cmd)
+    if res == 0 then
+      portal_proxy.deauthenticate_user(ip,mac)
+    end  
+  end
 end
 dhcp_leases:close()
