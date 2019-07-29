@@ -122,7 +122,12 @@ function proxy.validate(user_mac,user_ip,sid,secret)
   local path   = table.concat(params,"/")
   local mkdir  = fs.mkdir(path .. "/" .. user_id)
   if mkdir == true then
-    return authorize_access_iptables(user_ip,user_mac)
+    local chain_exists = "/usr/sbin/iptables-save | /bin/grep 'A PREROUTING -s %s/32 -p udp -m mac --mac-source %s' > /dev/null"
+    chain_exists = string.format(chain_exists,user_ip,user_mac)
+    local res = os.execute(chain_exists)
+    if res ~= 0 then
+      return authorize_access_iptables(user_ip,user_mac)
+    end
   else
     local errno = nixio.errno()
     local errmsg = nixio.strerror(errno)

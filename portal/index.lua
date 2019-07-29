@@ -47,14 +47,6 @@ function handle_request(env)
     return true
   end
  
-  local params = protocol.urldecode_params(query_string)
-  local sid    = params['session_id']
-  local secret = params['secret']
-  if portal_proxy.validate(user_mac,user_ip,sid,secret) == true then
-    portal_proxy.success()
-    return true
-  end
-
   local status = portal_proxy.status_user(user_ip,user_mac)
 
   if status == "Authenticated" then
@@ -89,6 +81,14 @@ function handle_request(env)
     return true
   end
   -- REAUTH CODE END
+
+  local params = protocol.urldecode_params(query_string)
+  local sid    = params['session_id']
+  local secret = params['secret']
+  if portal_proxy.validate(user_mac,user_ip,sid,secret) == true then
+    portal_proxy.success()
+    return true
+  end
 
   if status == "User in localdb" then
     local params    = {cst.localdb,user_mac,user_ip}
