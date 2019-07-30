@@ -15,6 +15,7 @@ function constants.__init__()
   constants.ap_mac     = io.popen("/bin/cat " .. path_mac_addr):read("*l")
   constants.ap_timeout = tonumber(ini_conf_data.ap.timeout)
   constants.localdb    = ini_conf_data.localdb.path
+  constants.tmpdb      = ini_conf_data.localdb.tmp
   constants.ap_secret  = ini_conf_data.ap.secret
   constants.landing_page = ini_conf_data.portal.landing_page
   if ini_conf_data.portal.portal_page ~= nil then

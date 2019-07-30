@@ -122,12 +122,8 @@ function proxy.validate(user_mac,user_ip,sid,secret)
   local path   = table.concat(params,"/")
   local mkdir  = fs.mkdir(path .. "/" .. user_id)
   if mkdir == true then
-    local chain_exists = "/usr/sbin/iptables-save | /bin/grep 'A PREROUTING -s %s/32 -p udp -m mac --mac-source %s' > /dev/null"
-    chain_exists = string.format(chain_exists,user_ip,user_mac)
-    local res = os.execute(chain_exists)
-    if res ~= 0 then
-      return authorize_access_iptables(user_ip,user_mac)
-    end
+    authorize_access(user_ip,user_mac)
+    return true
   else
     local errno = nixio.errno()
     local errmsg = nixio.strerror(errno)
@@ -172,6 +168,7 @@ function proxy.deauthenticate_user(user_ip,user_mac)
   if x == 2 then
     nixio.syslog("warning",cmd .. " failed with exit code "..x)
   end
+  fs.remove(cst.tmpdb .. "/" .. user_mac)
   local cmd = "/bin/rm -rf " .. cst.localdb .. "/" .. user_mac
   local y = os.execute(cmd)
   if y ~= 0 then
@@ -181,14 +178,16 @@ function proxy.deauthenticate_user(user_ip,user_mac)
 end
 
 function proxy.reauthenticate_user(user_ip,user_mac,sid,secret,date_auth,user_id)
+  nixio.syslog("info","Reauthenticating " .. user_mac)
   local insert = ut.insert_localdb(user_mac,user_ip,sid,secret)
   if insert == false then
+    nixio.syslog("info","inserted in localdb? " .. tostring(insert))
     return false
   end
   local params = {cst.localdb,user_mac,user_ip,sid,secret}
   local path = table.concat(params,"/")
   local mkdir = fs.mkdir(path .. "/" .. user_id)
-  if mkdir == false then
+  if mkdir == nil then
     nixio.syslog("warning","Failed to create user_id dir")
     return false
   end
@@ -198,23 +197,32 @@ function proxy.reauthenticate_user(user_ip,user_mac,sid,secret,date_auth,user_id
     nixio.syslog("err","Failed to set date on localdb file")
     return false
   end
-  local chain_exists = "/usr/sbin/iptables-save | /bin/grep 'A PREROUTING -s %s/32 -p udp -m mac --mac-source %s' > /dev/null"
-  chain_exists = string.format(chain_exists,user_ip,user_mac)
-  local res = os.execute(chain_exists)
-  if res ~= 0 then
-    return authorize_access_iptables(user_ip,user_mac)
-  end
+  nixio.syslog("info","reauthenticate")
+  authorize_access(user_ip,user_mac)
+  return true
 end
 
-function authorize_access_iptables(user_ip,user_mac)
+function set_iptables_rule_for_internet_access(user_ip,user_mac)
   local cmd_auth = "/usr/sbin/iptables -t nat -I PREROUTING -p udp -s " ..user_ip ..                         
   " -m mac --mac-source " .. user_mac .. " --dport 53 -j REDIRECT --to-ports 5353 > /dev/null"
   local a = os.execute(cmd_auth)
   if a ~= 0 then
     nixio.syslog("err", cmd_auth .. " failed with exit code: " .. a)
+    fs.remove(cst.tmpdb .. "/" .. user_mac)
     return false
   end
-  return true
+end
+
+function authorize_access(user_ip,user_mac)
+  local mk  = fs.mkdir(cst.tmpdb .. "/" .. user_mac)
+  if mk then
+    nixio.syslog("info","Setting rule for " .. user_mac)
+    set_iptables_rule_for_internet_access(user_ip,user_mac)
+    return true
+  else
+    nixio.syslog("info","Rule already applied for " .. user_mac)
+    return false
+  end
 end
 
 function proxy.has_user_been_connected(mac)
