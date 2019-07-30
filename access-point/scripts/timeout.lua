@@ -40,3 +40,19 @@ for line in dhcp_leases:lines() do
   end
 end
 dhcp_leases:close()
+
+local macs = io.popen("/bin/ls " .. cst.localdb)
+for mac in macs:lines() do
+  local cmd = "/bin/grep %s /tmp/dhcp.leases"
+  cmd = string.format(cmd,mac)
+  local res = os.execute(cmd)
+  if res ~= 0 then
+    local rm = "/bin/rm -rf %s/%s"
+    rm = string.format(rm,cst.localdb,mac)
+    local x = os.execute(rm)
+    if x ~= 0 then
+      nixio.syslog("err","timeout.lua Failed to do " .. rm)
+    end
+  end
+end
+macs:close()
