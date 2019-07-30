@@ -47,13 +47,22 @@ function handle_request(env)
     return true
   end
  
+  local params = protocol.urldecode_params(query_string)
+  local sid    = params['session_id']
+  local secret = params['secret']
+  if portal_proxy.validate(user_mac,user_ip,sid,secret) == true then
+    portal_proxy.success()
+    nixio.syslog("info","end request " .. timer)
+    os.exit()
+  end
+
   local status = portal_proxy.status_user(user_ip,user_mac)
 
   if status == "Authenticated" then
     redirect(cst.PortalUrl .. "/index.php")
     return true
   end
-  
+
   -- REAUTH CODE BEGIN
   local connected = portal_proxy.has_user_been_connected(user_mac)
   if connected == false then
@@ -61,7 +70,7 @@ function handle_request(env)
     return false
   end
   if connected["authenticated"] then
-    -- If user has been pre authenticated on this AP but then has authenticated on another AP
+  -- If user has been pre authenticated on this AP but then has authenticated on another AP
     if status == "User in localdb" then
       local find = "/usr/bin/find /var/localdb/%s -name '*' -type d -mindepth 3"
       find = string.format(find,user_mac)
@@ -81,14 +90,6 @@ function handle_request(env)
     return true
   end
   -- REAUTH CODE END
-
-  local params = protocol.urldecode_params(query_string)
-  local sid    = params['session_id']
-  local secret = params['secret']
-  if portal_proxy.validate(user_mac,user_ip,sid,secret) == true then
-    portal_proxy.success()
-    return true
-  end
 
   if status == "User in localdb" then
     local params    = {cst.localdb,user_mac,user_ip}

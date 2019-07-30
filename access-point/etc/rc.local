@@ -7,6 +7,7 @@ sleep 5
 /etc/init.d/dnsmasq disable
 /etc/init.d/dnsmasq stop
 mkdir /var/localdb
+mkdir /var/tmpdb
 touch /tmp/dns.data
 mkfifo /tmp/dns.log
 sleep 5
@@ -20,6 +21,8 @@ sleep 5
 /etc/init.d/cron start
 sleep 10
 /etc/init.d/uhttpd restart
+iw dev wlan0 set txpower fixed 1900
+iw dev wlan1 set txpower fixed 1900
 ../scripts/file-watcher.sh
 ## ----- USER:FOOTER -----
 ## ----- END USER:FOOTER -----
