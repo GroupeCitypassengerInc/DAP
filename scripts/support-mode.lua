@@ -4,7 +4,7 @@
 --  in order to display page with AP informations.
 --
 --]]
-package.path = package.path .. ';/portal/lib/?.lua'
+package.path = package.path .. ';/scripts/lib/?.lua'
 nixio = require 'nixio'
 reload = require 'reloader'
 fs = require 'nixio.fs'
@@ -12,11 +12,11 @@ fs = require 'nixio.fs'
 -- Killall hostapd
 x = fs.remove('/tmp/hostapd.0.pid')
 if x ~= true then
-  nixio.syslog('warn','No hostapd 0 pid file to remove')
+  nixio.syslog('warning','No hostapd 0 pid file to remove')
 end
 y = fs.remove('/tmp/hostapd.1.pid')
 if y ~= true then
-  nixio.syslog('warn','No hostapd 1 pid file to remove')
+  nixio.syslog('warning','No hostapd 1 pid file to remove')
 end
 local cmd = '/usr/bin/killall hostapd'
 local s = os.execute(cmd)
@@ -26,7 +26,7 @@ end
 
 -- Start hostapd support
 os.execute('/bin/sleep 1')
-reload.hostapd('/etc/hostapd.support.conf')
+reload.retry_hostapd('/etc/hostapd.support.conf')
 reload.bridge()
 reload.dnsmasq()
 -- Set listen ip for LUCI interface in troubleshooting mode
