@@ -40,6 +40,7 @@ local data =
   localdb=
   {
     path='/var/localdb',
+    tmp='/var/tmpdb'
   },
   ap=
   {
@@ -137,7 +138,7 @@ if hardware_now ~= hardware_new then
     g:write(conf)
     g:close()
     i = i + 1
-    reload.hostapd(hostapd_file)
+    reload.retry_hostapd(hostapd_file)
   end
   reload.bridge()
   reload.dnsmasq()
@@ -242,7 +243,7 @@ if data.ap.ssid ~= ssid_new then
     if t ~= 0 then
       nixio.syslog('err','Failed to change ssid in ' .. hostapd_file)
     end
-    reload.hostapd(hostapd_file)
+    reload.retry_hostapd(hostapd_file)
   end
   data.ap.ssid = ssid_new
   parser.save(ini_file,data)
