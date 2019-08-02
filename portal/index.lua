@@ -59,7 +59,7 @@ function handle_request(env)
   local status = portal_proxy.status_user(user_ip,user_mac)
 
   if status == "Authenticated" then
-    redirect(cst.PortalUrl .. "/index.php")
+    portal_proxy.success()
     return true
   end
 
@@ -87,6 +87,7 @@ function handle_request(env)
     local user_id = connected["user_id"]
     local date_auth = tonumber(connected["ap_validation"])
     portal_proxy.reauthenticate_user(user_ip,user_mac,sid,secret,date_auth,user_id)
+    portal_proxy.success()
     return true
   end
   -- REAUTH CODE END
