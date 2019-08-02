@@ -168,7 +168,11 @@ function proxy.deauthenticate_user(user_ip,user_mac)
   if x == 2 then
     nixio.syslog("warning",cmd .. " failed with exit code "..x)
   end
-  fs.rmdir(cst.tmpdb .. "/" .. user_mac)
+  local lockpath = cst.tmpdb .. "/" .. user_mac
+  local rm = fs.rmdir(lockpath)
+  if rm == nil then
+    nixio.syslog("warning",lockpath .. " does not exist")
+  end
   local cmd = "/bin/rm -rf " .. cst.localdb .. "/" .. user_mac
   local y = os.execute(cmd)
   if y ~= 0 then
