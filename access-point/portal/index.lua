@@ -20,14 +20,14 @@ function handle_request(env)
   if b == 0 then
     portal_proxy.no_wifi()
     os.exit()
-  end  
+  end
 
   local query_string = env.QUERY_STRING	
 
   local user_ip   = env.REMOTE_ADDR
   local ap_mac    = cst.ap_mac
   local get_mac   = "/scripts/get-mac-client " .. user_ip
- 
+
   local user_mac  = io.popen(get_mac):read("*a")
   if user_mac == "" then
     portal_proxy.no_dhcp_lease()
@@ -46,13 +46,29 @@ function handle_request(env)
     portal_proxy.print_data(data)
     return true
   end
- 
+  
+  if c == "create" then
+    local s = portal_proxy.status_user(user_ip,user_mac)
+    if s == "User in localdb" then
+      local params    = {cst.localdb,user_mac,user_ip}                                       
+      local select_db = table.concat(params,"/")                                             
+      local cmd_sid   = "/bin/ls " .. select_db                                   
+      local sid_db    = io.popen(cmd_sid):read("*l")                              
+      local rdrinfo   = "session_id=" .. sid_db .. "&mac=" .. user_mac
+      uhttpd.send("Status: 302 Found\r\n")                      
+      uhttpd.send("Location: "..cst.PortalPage .. "?" .. rdrinfo .. "\r\n")
+      uhttpd.send("Content-Type: text/html\r\n\r\n")
+      return true	
+    end
+    portal_proxy.initialize_redirected_client(user_ip,user_mac)
+    return true
+  end
+
   local params = protocol.urldecode_params(query_string)
   local sid    = params['session_id']
   local secret = params['secret']
   if portal_proxy.validate(user_mac,user_ip,sid,secret) == true then
     portal_proxy.success()
-    nixio.syslog("info","end request " .. timer)
     os.exit()
   end
 
@@ -91,7 +107,7 @@ function handle_request(env)
     return true
   end
   -- REAUTH CODE END
-
+  
   if status == "User in localdb" then
     local params    = {cst.localdb,user_mac,user_ip}
     local select_db = table.concat(params,"/")
@@ -106,7 +122,9 @@ function handle_request(env)
   local create_user = fs.mkdir(path_db)
   -- First request
   if create_user == true then
-    portal_proxy.initialize_redirected_client(user_ip,user_mac)
+    uhttpd.send("Status: 302 Found\r\n")
+    uhttpd.send("Location: http://cloudgate.citypassenger.com/create\r\n")
+    uhttpd.send("Content-Type: text/html\r\n\r\n")
     return true
   end
   if create_user == nil then
