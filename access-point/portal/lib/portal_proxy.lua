@@ -10,6 +10,7 @@ local json     = require "luci.jsonc"
 local nixio    = require "nixio"
 local fs       = require "nixio.fs"
 local helper   = require "helper"
+local http     = require "luci.http"
 local proxy    = {}
 local CURL     = "/usr/bin/curl "
 
@@ -49,12 +50,13 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
   -- Send a request to server
   local ap_secret = cst.ap_secret
   local cmd = CURL ..
-  '--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "' .. 
+  '--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L --keepalive-time 20 "' .. 
   cst.PortalUrl .. 
   '/index.php?digilan-token-action=create&user_ip=' .. 
   user_ip ..'&ap_mac=' .. cst.ap_mac .. 
-  '&digilan-token-secret=' .. ap_secret .. '"'
+  '&digilan-token-secret=' .. ap_secret .. '"' 
   -- server responds with secret and sid
+
   response,exit = helper.command(cmd)
   if exit ~= 0 then
     nixio.syslog('err','connection create: cURL failed with exit code: '..exit)
@@ -101,11 +103,15 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
     uhttpd.send(data_table_stringified)
     return false
   end
-
+ 
+  local query_table = {
+    session_id=sid,
+    mac=user_mac
+  }
   -- return a 302
-  local rdrinfo = "session_id=" .. sid .. "&mac=" .. user_mac 
-  redirect(cst.PortalPage .. "?" .. rdrinfo)
-  return { sid, secret }
+  local rdrinfo = http.build_querystring(query_table)
+  redirect(cst.PortalPage .. rdrinfo)
+  return true
 end
 
 function proxy.validate(user_mac,user_ip,sid,secret)
