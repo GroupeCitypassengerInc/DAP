@@ -60,7 +60,7 @@ local data =
 
 resp = nil
 
-if api_key == nil then
+if not api_key then
   resp = nil
 else
   local cmd  = '/usr/bin/curl --retry 3 --retry-delay 20 --fail -m 10 --connect-timeout 10 -s -H "CityscopeApiKey: %s" ' .. 
@@ -77,7 +77,7 @@ end
 url = nil
 secret = nil
 
-if resp == nil then
+if not resp then
   parser.save(ini_file,data)
   nixio.syslog('info','No secret and URL.')
   os.exit(1)
@@ -154,7 +154,7 @@ end
 --
 --]]
 
-if url == nil then
+if not url then
   nixio.syslog('warning','No portal URL')
   return false
 end
@@ -192,7 +192,7 @@ while true do
     os.exit(exit)
   end
   wp_reg = json.parse(response)
-  if wp_reg ~= nil then
+  if wp_reg then
     break
   end
 end
@@ -219,7 +219,7 @@ while true do
     os.exit(exit)
   end
   wp_resp = json.parse(response)
-  if wp_resp ~= nil then
+  if wp_resp then
     break
   end
 end
@@ -254,7 +254,7 @@ else
 end
 
 --- Update timeout
-if tonumber(wp_resp['timeout']) == nil then
+if not tonumber(wp_resp['timeout']) then
   nixio.syslog('err',wp_resp['timeout'] .. ' is not a number.')
   return false
 end
