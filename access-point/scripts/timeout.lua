@@ -4,6 +4,7 @@ package.path       = package.path .. ";/scripts/lib/?.lua"
 local portal_proxy = require "portal_proxy"
 local cst	   = require "proxy_constants"
 local nixio        = require "nixio"
+local fs           = require "nixio.fs"
 local lease        = require "lease_file_reader"
 
 local path_dhcp = "/tmp/dhcp.leases"
@@ -43,15 +44,31 @@ dhcp_leases:close()
 
 local macs = io.popen("/bin/ls " .. cst.localdb)
 for mac in macs:lines() do
-  local cmd = "/bin/grep %s /tmp/dhcp.leases"
-  cmd = string.format(cmd,mac)
+  -- Remove macs from localdb without child dir
+  local cmd = "/bin/ls %s/* > /dev/null 2>&1"
+  cmd = string.format(cmd,cst.localdb .. "/" .. mac)
   local res = os.execute(cmd)
+  local date_cmd = "/bin/date -r " .. cst.localdb .. "/" .. mac .. " +%s"
+  local date_dir = io.popen(date_cmd):read("*l")
+  date_dir = tonumber(date_dir)
+  local date_now = io.popen("/bin/date +%s"):read("*l")
+  date_now = tonumber(date_now)
   if res ~= 0 then
-    local rm = "/bin/rm -rf %s/%s"
-    rm = string.format(rm,cst.localdb,mac)
-    local x = os.execute(rm)
-    if x ~= 0 then
-      nixio.syslog("err","timeout.lua Failed to do " .. rm)
+    if date_now - date_dir >= 60 then
+      fs.remove(cst.localdb .. "/" .. mac)
+    end
+  else
+    -- Clean macs in localdb with expired lease
+    local cmd = "/bin/grep %s /tmp/dhcp.leases"
+    cmd = string.format(cmd,mac)
+    local res = os.execute(cmd)
+    if res ~= 0 then
+      local rm = "/bin/rm -rf %s/%s"
+      rm = string.format(rm,cst.localdb,mac)
+      local x = os.execute(rm)
+      if x ~= 0 then
+        nixio.syslog("err","timeout.lua Failed to do " .. rm)
+      end
     end
   end
 end
