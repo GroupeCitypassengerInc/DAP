@@ -17,8 +17,7 @@ local CURL     = "/usr/bin/curl "
 function redirect(url)
   uhttpd.send("Status: 302 Found\r\n")
   uhttpd.send("Location: "..url.."\r\n")  
-  uhttpd.send("Content-Type: text/html\r\n")
-  uhttpd.send("\r\n\r\n")
+  uhttpd.send("Content-Type: text/html\r\n\r\n")
 end
 
 function proxy.success()
@@ -29,10 +28,23 @@ function proxy.success()
   end
 end
 
+function proxy.serve_portal_to_preauthenticated_user(user_mac,user_ip)
+  local params    = {cst.localdb,user_mac,user_ip}
+  local select_db = table.concat(params,"/")
+  local cmd_sid   = "/bin/ls " .. select_db
+  local sid_db    = io.popen(cmd_sid):read("*l")
+  local query_table = {
+    session_id=sid,
+    mac=user_mac
+  }
+  local rdrinfo = http.build_querystring(query_table)
+  redirect(cst.PortalPage .. rdrinfo)
+end
+
 function proxy.no_wifi()
   local cmd = "/sbin/uci get system.@system[0].hostname"
   local hostname = io.popen(cmd):read("*l")
-  if cst.error_page == nil then
+  if not cst.error_page then
     redirect(cst.PortalUrl .. "/")
   else 
     redirect(cst.error_page .. "?hostname=" .. hostname)
@@ -50,11 +62,11 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
   -- Send a request to server
   local ap_secret = cst.ap_secret
   local cmd = CURL ..
-  '--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L --keepalive-time 20 "' .. 
+  '--retry 3 --retry-delay 5 --fail -m 15 --connect-timeout 15 -s -L "' ..
   cst.PortalUrl .. 
   '/index.php?digilan-token-action=create&user_ip=' .. 
   user_ip ..'&ap_mac=' .. cst.ap_mac .. 
-  '&digilan-token-secret=' .. ap_secret .. '"' 
+  '&digilan-token-secret=' .. ap_secret .. '"'
   -- server responds with secret and sid
 
   response,exit = helper.command(cmd)
@@ -87,6 +99,10 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
   local secret = response.secret
   
   local insert = ut.insert_localdb(user_mac,user_ip,sid,secret)
+
+  if not insert then
+    redirect("http://cloudgate.citypassenger.com")
+  end
  
   if insert == false then
     local data_table = {
@@ -143,7 +159,7 @@ end
 
 function validate_data_on_server(user_ip,user_mac,secret,sid)
   local ap_secret = cst.ap_secret
-  local cmd  = CURL ..'--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "' 
+  local cmd  = CURL ..'--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "'
   ..  cst.PortalUrl .. '/index.php?digilan-token-action=validate&user_ip='
   .. user_ip .. '&ap_mac='.. cst.ap_mac ..
   '&secret=' .. secret .. '&session_id=' .. sid ..'&digilan-token-secret=' .. ap_secret.. '"'
@@ -237,7 +253,7 @@ end
 
 function proxy.has_user_been_connected(mac)
   local cmd  = CURL ..'--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "'                          
-  ..  cst.PortalUrl .. '/index.php?digilan-token-action=reauth&mac='.. mac ..                                          
+  .. cst.PortalUrl .. '/index.php?digilan-token-action=reauth&mac='.. mac ..                                          
   '&digilan-token-secret=' .. cst.ap_secret.. '"'
   while true do
     local connection,exit = helper.command(cmd)
