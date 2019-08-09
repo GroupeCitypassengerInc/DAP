@@ -7,6 +7,7 @@ package.path = package.path .. ';/scripts/lib/?.lua'
 package.path = package.path .. ';/portal/lib/?.lua'
 local portal = require 'portal_proxy'
 local lease  = require 'lease_file_reader'
+local nixio  = require 'nixio'
 
 local cmd = '/usr/bin/test -e /tmp/noaccess'
 local x = os.execute(cmd)
@@ -18,7 +19,7 @@ if x ~= 0 then
   end
 end
 
-os.execute('/bin/sleep 15')
+nixio.nanosleep(15)
 local cmd = '/usr/bin/test -e /tmp/noaccess'
 local x = os.execute(cmd)
 if x == 0 then

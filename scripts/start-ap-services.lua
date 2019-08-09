@@ -6,7 +6,7 @@ local fs     = require 'nixio.fs'
 local check = '/usr/bin/test -e /tmp/hostapd.0.pid'
 local s = os.execute(check)
 if s ~= 0 then
-  reload.hostapd('/etc/hostapd.0.conf')
+  reload.retry_hostapd('/etc/hostapd.0.conf')
 end
 
 -- kill hostapd support if needed
@@ -31,12 +31,12 @@ if internet ~= 0 then
   end
 end
 
-os.execute('/bin/sleep 1')
+nixio.nanosleep(1)
 
 local check = '/usr/bin/test -e /tmp/hostapd.1.pid'
 local s = os.execute(check)
 if s ~= 0 then
-  reload.hostapd('/etc/hostapd.1.conf')
+  reload.retry_hostapd('/etc/hostapd.1.conf')
 end
 
 reload.bridge()
