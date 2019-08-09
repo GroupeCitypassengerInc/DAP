@@ -11,11 +11,11 @@ fs = require 'nixio.fs'
 
 -- Killall hostapd
 x = fs.remove('/tmp/hostapd.0.pid')
-if x ~= true then
+if not x then
   nixio.syslog('warning','No hostapd 0 pid file to remove')
 end
 y = fs.remove('/tmp/hostapd.1.pid')
-if y ~= true then
+if not y true then
   nixio.syslog('warning','No hostapd 1 pid file to remove')
 end
 local cmd = '/usr/bin/killall hostapd'
@@ -25,7 +25,7 @@ if s ~= 0 then
 end
 
 -- Start hostapd support
-os.execute('/bin/sleep 1')
+nixio.nanosleep(1)
 reload.retry_hostapd('/etc/hostapd.support.conf')
 reload.bridge()
 reload.dnsmasq()
