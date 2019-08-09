@@ -5,7 +5,6 @@
 --
 ----]]
 
-
 local db       = {}
 local data     = require "luci.cbi.datatypes"
 local cst      = require "proxy_constants"
@@ -38,7 +37,7 @@ function db.select_localdb(user_mac,user_ip,sid,secret)
   local params  = {localdb, user_mac, user_ip, sid,secret}
   local path_db = table.concat(params,"/")
   local stat    = fs.stat(path_db)
-  if stat == nil then
+  if not stat then
     local errno = nixio.errno()
     local errmsg = nixio.strerror(errno)
     nixio.syslog("err", errno .. ": " .. errmsg)
@@ -68,6 +67,12 @@ function db.insert_localdb(user_mac,user_ip,sid,secret)
   end
   
   -- create directories as unique identifiers, to store client data.
+  local params = {localdb, user_mac, user_ip}
+  local path   = table.concat(params,"/")
+  local mkdir_ip = fs.mkdir(path)
+  if not mkdir_ip then
+    return nil
+  end
   local params = {localdb, user_mac, user_ip, sid, secret}
   local path   = table.concat(params,"/")
   local mkdir  = fs.mkdirr(path)
