@@ -126,7 +126,7 @@ if hardware_now ~= hardware_new then
   if x ~= 0 then
     nixio.syslog('warning','No hostapd killed.')
   end
-  os.execute('/bin/sleep 1')
+  nixio.nanosleep(1)
   local i = 0
   for hostapd_file,conf in pairs(resp['files']) do
     local bssid = bssid.get_bssid(i)
@@ -235,7 +235,7 @@ if data.ap.ssid ~= ssid_new then
   if x ~= 0 then
     nixio.syslog('warning','No hostapd killed.')
   end
-  os.execute('/bin/sleep 1')
+  nixio.nanosleep(1)
   change_ssid = "/bin/sed -i 's#^ssid=.*#ssid=%s#g' %s"
   for hostapd_file in pairs(resp['files']) do
     local s = string.format(change_ssid,ssid_new,hostapd_file)
