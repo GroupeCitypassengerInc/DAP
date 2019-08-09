@@ -8,11 +8,14 @@ local support      = require "troubleshooting"
 local fs           = require "nixio.fs"
 
 function handle_request(env)
+  local url_path = protocol.urldecode(string.sub(env.REQUEST_URI,2))
   -- Return a troubleshooting page when AP has no internet.
   local a = os.execute('/usr/bin/test -e /tmp/internet')
   if a ~= 0 then
-    support.troubleshoot()
-    os.exit()
+    if url_path == support then
+      support.troubleshoot()
+      os.exit()
+    end
   end
   
   -- Return a wordpress error page when wifi is scheduled to be down.
@@ -28,8 +31,8 @@ function handle_request(env)
   local ap_mac    = cst.ap_mac
   local get_mac   = "/scripts/get-mac-client " .. user_ip
 
-  local user_mac  = io.popen(get_mac):read("*a")
-  if user_mac == "" then
+  local user_mac  = io.popen(get_mac):read("*l")
+  if not user_mac then
     portal_proxy.no_dhcp_lease()
     os.exit()
   end
@@ -41,24 +44,16 @@ function handle_request(env)
     portal_url=cst.PortalUrl
   }
   local data = json.stringify(table_data)
-  local c = protocol.urldecode(string.sub(env.REQUEST_URI,2))
-  if c == "test" then
+  
+  if url_path == "test" then
     portal_proxy.print_data(data)
     return true
   end
   
-  if c == "create" then
+  if url_path == "create" then
     local s = portal_proxy.status_user(user_ip,user_mac)
     if s == "User in localdb" then
-      local params    = {cst.localdb,user_mac,user_ip}                                       
-      local select_db = table.concat(params,"/")                                             
-      local cmd_sid   = "/bin/ls " .. select_db                                   
-      local sid_db    = io.popen(cmd_sid):read("*l")                              
-      local rdrinfo   = "session_id=" .. sid_db .. "&mac=" .. user_mac
-      uhttpd.send("Status: 302 Found\r\n")                      
-      uhttpd.send("Location: "..cst.PortalPage .. "?" .. rdrinfo .. "\r\n")
-      uhttpd.send("Content-Type: text/html\r\n\r\n")
-      return true	
+      portal_proxy.serve_portal_to_preauthenticated_user(user_mac,user_ip)
     end
     portal_proxy.initialize_redirected_client(user_ip,user_mac)
     return true
@@ -81,6 +76,10 @@ function handle_request(env)
 
   -- REAUTH CODE BEGIN
   local connected = portal_proxy.has_user_been_connected(user_mac)
+  if not connected then
+    nixio.syslog("err","Request /reauth has failed")
+    return false
+  end
   if connected == false then
     nixio.syslog("err","Failed to get user status from db")
     return false
@@ -109,13 +108,7 @@ function handle_request(env)
   -- REAUTH CODE END
   
   if status == "User in localdb" then
-    local params    = {cst.localdb,user_mac,user_ip}
-    local select_db = table.concat(params,"/")
-    local cmd_sid   = "/bin/ls " .. select_db                             
-    local sid_db    = io.popen(cmd_sid):read("*l")                   
-    local rdrinfo   = "session_id=" .. sid_db .. "&mac=" .. user_mac      
-    redirect(cst.PortalPage .. "?" .. rdrinfo)
-    return true                                                                               
+    portal_proxy.serve_portal_to_preauthenticated_user(user_mac,user_ip)
   end
  
   local path_db = cst.localdb .. "/" .. user_mac
