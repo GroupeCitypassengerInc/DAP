@@ -10,16 +10,16 @@ local fs           = require "nixio.fs"
 function handle_request(env)
   local url_path = protocol.urldecode(string.sub(env.REQUEST_URI,2))
   -- Return a troubleshooting page when AP has no internet.
-  local a = os.execute('/usr/bin/test -e /tmp/internet')
+  local a = os.execute("/usr/bin/test -e /tmp/internet")
   if a ~= 0 then
-    if url_path == support then
+    if url_path == "support" then
       support.troubleshoot()
       os.exit()
     end
   end
   
   -- Return a wordpress error page when wifi is scheduled to be down.
-  local b = os.execute('/usr/bin/test -e /tmp/noaccess')
+  local b = os.execute("/usr/bin/test -e /tmp/noaccess")
   if b == 0 then
     portal_proxy.no_wifi()
     os.exit()
@@ -60,8 +60,8 @@ function handle_request(env)
   end
 
   local params = protocol.urldecode_params(query_string)
-  local sid    = params['session_id']
-  local secret = params['secret']
+  local sid    = params["session_id"]
+  local secret = params["secret"]
   if portal_proxy.validate(user_mac,user_ip,sid,secret) == true then
     portal_proxy.success()
     os.exit()
