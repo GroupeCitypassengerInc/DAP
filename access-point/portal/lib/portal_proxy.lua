@@ -62,11 +62,11 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
   -- Send a request to server
   local ap_secret = cst.ap_secret
   local cmd = CURL ..
-  '--retry 3 --retry-delay 5 --fail -m 15 --connect-timeout 15 -s -L "' ..
+  '--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "' .. 
   cst.PortalUrl .. 
   '/index.php?digilan-token-action=create&user_ip=' .. 
   user_ip ..'&ap_mac=' .. cst.ap_mac .. 
-  '&digilan-token-secret=' .. ap_secret .. '"'
+  '&digilan-token-secret=' .. ap_secret .. '"' 
   -- server responds with secret and sid
 
   response,exit = helper.command(cmd)
@@ -159,8 +159,8 @@ end
 
 function validate_data_on_server(user_ip,user_mac,secret,sid)
   local ap_secret = cst.ap_secret
-  local cmd  = CURL ..'--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "'
-  ..  cst.PortalUrl .. '/index.php?digilan-token-action=validate&user_ip='
+  local cmd  = CURL ..'--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "' 
+  .. cst.PortalUrl .. '/index.php?digilan-token-action=validate&user_ip='
   .. user_ip .. '&ap_mac='.. cst.ap_mac ..
   '&secret=' .. secret .. '&session_id=' .. sid ..'&digilan-token-secret=' .. ap_secret.. '"'
   while true do
@@ -271,7 +271,7 @@ end
 function proxy.status_user(user_ip,user_mac)
   local params    = {cst.localdb,user_mac,user_ip}
   local select_db = table.concat(params,"/")
-  local cmd_sid   = "/bin/ls " .. select_db
+  local cmd_sid   = "/bin/ls " .. select_db .. " >/dev/null 2>&1"
   local sid_db,x = helper.command(cmd_sid)
   if x ~= 0 then
     return "Lease. Not in localdb"
