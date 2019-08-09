@@ -88,12 +88,13 @@ function r.retry_hostapd(path)
     s = start_hostapd(path)
     if s == true then
       if is_wlan_up(wlanif) then
+        nixio.nanosleep(2)
         addif_br(wlanif)
         break
       end
     else
       kill_hostapd(path)
-      os.execute('/bin/sleep 10')
+      nixio.nanosleep(10)
     end    
   end
 end
