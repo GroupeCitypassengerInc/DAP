@@ -15,7 +15,7 @@ if not x then
   nixio.syslog('warning','No hostapd 0 pid file to remove')
 end
 y = fs.remove('/tmp/hostapd.1.pid')
-if not y true then
+if not y then
   nixio.syslog('warning','No hostapd 1 pid file to remove')
 end
 local cmd = '/usr/bin/killall hostapd'
