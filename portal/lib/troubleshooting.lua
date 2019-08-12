@@ -1,12 +1,12 @@
 local helper = require 'helper'
 local json = require 'luci.jsonc'
 local cst = require 'proxy_constants'
+local date_module = require 'luci.http.protocol.date'
 
 support = {}
 
 function support.date()
-  cmd = '/bin/date'
-  return io.popen(cmd):read('*a')
+  return os.date("%a, %d %b %Y %H:%M:%S GMT")
 end
 
 function top()
@@ -64,7 +64,8 @@ function support.has_lease()
     return false
   end
   local cmd = '/bin/date +%s'
-  local date_now = tonumber(io.popen(cmd):read('*l'))
+  local date_now = os.date("%a, %d %b %Y %H:%M:%S GMT")
+  date_now = date_module.to_unix(date_now)
   local lease_time = net_info.data.leasetime
   return date_now - lease_date <= lease_time
 end
