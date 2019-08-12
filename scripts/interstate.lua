@@ -5,26 +5,17 @@
 --
 ]]--
 
-
 package.path = package.path .. ';/portal/lib/?.lua'
 local nixio = require 'nixio'
 local fs = require 'nixio.fs'
-local cst = require 'proxy_constants'
+local support = require 'troubleshooting'
 
 local file_internet = '/tmp/internet'
 local file_nointernet = '/tmp/nointernet'
-local cmd = '/usr/bin/nc -w2 -zv %s 443 2> /dev/null'
-local res
-if not cst.PortalUrl then
-  res = 1
-else
-  local host = cst.PortalUrl:match('^%w+://([^/]+)')
-  local check_connectivity = string.format(cmd,host)
-  res = os.execute(check_connectivity)
-end
 local create_file = '/bin/touch %s'
+local has_portal = support.has_access_to_portal()
 
-if res == 0 then
+if has_portal then
   create_file = string.format(create_file,file_internet)
   local x = os.execute(create_file)
   if x ~= 0 then
