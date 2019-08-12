@@ -14,9 +14,14 @@ local cst = require 'proxy_constants'
 local file_internet = '/tmp/internet'
 local file_nointernet = '/tmp/nointernet'
 local cmd = '/usr/bin/nc -w2 -zv %s 443 2> /dev/null'
-local host = cst.PortalUrl:match('^%w+://([^/]+)')
-local check_connectivity = string.format(cmd,host)
-local res = os.execute(check_connectivity)
+local res
+if not cst.PortalUrl then
+  res = 1
+else
+  local host = cst.PortalUrl:match('^%w+://([^/]+)')
+  local check_connectivity = string.format(cmd,host)
+  res = os.execute(check_connectivity)
+end
 local create_file = '/bin/touch %s'
 
 if res == 0 then
