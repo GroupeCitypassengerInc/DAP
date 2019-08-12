@@ -14,8 +14,10 @@ function handle_request(env)
   if a ~= 0 then
     if url_path == "support" then
       support.troubleshoot()
-      os.exit()
+    else
+      dofile("/portal/diagnostic.lua")
     end
+    os.exit()
   end
   
   -- Return a wordpress error page when wifi is scheduled to be down.
