@@ -1,7 +1,10 @@
+local helper = require 'helper'
+local json = require 'luci.jsonc'
+local cst = require 'proxy_constants'
 
 support = {}
 
-function date()
+function support.date()
   cmd = '/bin/date'
   return io.popen(cmd):read('*a')
 end
@@ -16,9 +19,9 @@ function route()
   return io.popen(cmd):read('*a')
 end
 
-function is_port2_plugged()
-  cmd = '/sbin/swconfig dev switch0 port 2 show | /usr/bin/tail -n1'
-  return io.popen(cmd):read('*a')
+function swconfig_switch0_port2()
+  cmd = '/sbin/swconfig dev switch0 port 2 show | /usr/bin/tail -n1 | /usr/bin/tr -d "\t"'
+  return io.popen(cmd):read('*l')
 end
 
 function port(iface)
@@ -46,17 +49,51 @@ function traceroute()
   return io.popen(cmd):read('*a')
 end
 
+function support.is_port2_plugged()
+  local link_info = swconfig_switch0_port2()
+  local link_up = "link: port:2 link:up speed:100baseT full-duplex txflow rxflow auto"
+  return link_info == link_up
+end
+
+function support.has_lease()
+  local cmd = '/bin/ubus call network.interface.cfg036d96 status'
+  local r = io.popen(cmd):read('*a')
+  local net_info = json.parse(r)
+  local lease_date = net_info.data.date
+  if not lease_date then
+    return false
+  end
+  local cmd = '/bin/date +%s'
+  local date_now = tonumber(io.popen(cmd):read('*l'))
+  local lease_time = net_info.data.leasetime
+  return date_now - lease_date >= lease_time
+end
+
+function support.has_access_to_portal()
+  if not cst.PortalUrl then
+    return false
+  end
+  local host = cst.PortalUrl:match('^%w+://([^/]+)')
+  local cmd = '/usr/bin/nc -w2 -zv %s 443 2> /dev/null'
+  check_connectivity = string.format(cmd,host)
+  local res = os.execute(check_connectivity)
+  return res == 0
+end
+
 function support.troubleshoot()
   uhttpd.send('Status: 200 OK\r\n')
   uhttpd.send('Content-Type: text/text\r\n\r\n')
   uhttpd.send('======= DATE ======\r\n')
   uhttpd.send(date())
   uhttpd.send('\r\n')
+  uhttpd.send('======= HOSTNAME ======\r\n')
+  uhttpd.send(helper.get_hostname())
+  uhttpd.send('\r\n')
   uhttpd.send('======= INTERFACES =======\r\n')
   uhttpd.send(ifconfig())
   uhttpd.send('\r\n')
   uhttpd.send('======= PORT 2 =======\r\n')
-  uhttpd.send(is_port2_plugged())
+  uhttpd.send(swconfig_switch0_port2())
   uhttpd.send('\r\n')
   uhttpd.send('======= PORTS =======\r\n')
   uhttpd.send('INTERFACE eth0.10 (POE)\r\n')
