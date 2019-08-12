@@ -66,7 +66,7 @@ function support.has_lease()
   local cmd = '/bin/date +%s'
   local date_now = tonumber(io.popen(cmd):read('*l'))
   local lease_time = net_info.data.leasetime
-  return date_now - lease_date >= lease_time
+  return date_now - lease_date <= lease_time
 end
 
 function support.has_access_to_portal()
