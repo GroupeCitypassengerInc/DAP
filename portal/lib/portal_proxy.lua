@@ -100,11 +100,11 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
   
   local insert = ut.insert_localdb(user_mac,user_ip,sid,secret)
 
-  if not insert then
+  if insert == nil then
     redirect("http://cloudgate.citypassenger.com")
   end
  
-  if insert == false then
+  if not insert then
     local data_table = {
       message="invalid parameters", 
       user_mac=user_mac, 
