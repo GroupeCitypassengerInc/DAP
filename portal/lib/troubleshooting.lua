@@ -2,6 +2,7 @@ local helper = require 'helper'
 local json = require 'luci.jsonc'
 local cst = require 'proxy_constants'
 local date_module = require 'luci.http.protocol.date'
+local sys = require 'luci.sys'
 
 support = {}
 
@@ -85,10 +86,10 @@ function support.troubleshoot()
   uhttpd.send('Status: 200 OK\r\n')
   uhttpd.send('Content-Type: text/text\r\n\r\n')
   uhttpd.send('======= DATE ======\r\n')
-  uhttpd.send(date())
+  uhttpd.send(support.date())
   uhttpd.send('\r\n')
   uhttpd.send('======= HOSTNAME ======\r\n')
-  uhttpd.send(helper.get_hostname())
+  uhttpd.send(sys.hostname())
   uhttpd.send('\r\n')
   uhttpd.send('======= INTERFACES =======\r\n')
   uhttpd.send(ifconfig())
