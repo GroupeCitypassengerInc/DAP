@@ -17,6 +17,7 @@ local fs     = require 'nixio.fs'
 local helper = require 'helper'
 local bssid  = require 'bssid-helper'
 local ini    = require 'check_config_changes'
+local sys    = require 'luci.sys'
 
 ------------------------
 --------- GET CONFIG CITYSCOPE
@@ -33,8 +34,7 @@ local path_addr = '/sys/devices/platform/ag71xx.0/net/eth0/address'
 local ini_file = '/etc/proxy.ini'
 local mac = io.popen('/bin/cat ' .. path_addr):read('*l')
 local api_key = io.popen('/bin/cat /root/.ssh/apikey'):read('*l')
-local get_hostname = '/sbin/uci get system.@system[0].hostname'
-local hostname = io.popen(get_hostname):read('*l')
+local hostname = sys.hostname()
 local data =
 {
   localdb=
