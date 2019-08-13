@@ -78,11 +78,11 @@ function handle_request(env)
 
   -- REAUTH CODE BEGIN
   local connected = portal_proxy.has_user_been_connected(user_mac)
-  if not connected then
+  if connected == nil then
     nixio.syslog("err","Request /reauth has failed")
     return false
   end
-  if connected == false then
+  if not connected then
     nixio.syslog("err","Failed to get user status from db")
     return false
   end
