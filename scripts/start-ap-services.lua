@@ -20,11 +20,10 @@ if internet ~= 0 then
   if s == 0 then
     local cmd = '/bin/cat /tmp/hostapd.support.pid'
     local pid = io.popen(cmd):read('*l')
-    local cmd = '/bin/kill %s'
-    local cmd = string.format(cmd,pid)
-    local s = os.execute(cmd)
-    if s ~= 0 then
-      nixio.syslog('info','failed to kill hostapd support. Exit code: ' .. s)
+    pid = tonumber(pid)
+    local killed = nixio.kill(pid,15)
+    if not killed then
+      nixio.syslog('info','failed to kill hostapd support.')
     end
     local s = fs.remove('/tmp/hostapd.support.pid')
     if s ~= true then
