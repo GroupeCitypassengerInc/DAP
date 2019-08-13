@@ -59,10 +59,8 @@ function support.is_port2_plugged()
 end
 
 function support.has_lease()
-  local cmd = '/bin/ubus call network.interface.cfg036d96 status'
-  local r = io.popen(cmd):read('*a')
-  local net_info = json.parse(r)
-  local lease_date = net_info.data.date
+  local ubus_res = util.ubus('network.interface.cfg036d96','status')
+  local lease_date = ubus_res.data.date
   if not lease_date then
     return false
   end
