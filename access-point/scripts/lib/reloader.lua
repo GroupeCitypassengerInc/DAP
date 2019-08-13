@@ -6,11 +6,10 @@ function r.dnsmasq()
   local cmd = '/bin/cat /tmp/dnsmasq.pid'
   local pid = io.popen(cmd):read('*l')
   if pid ~= nil then
-    local cmd = '/bin/kill ' .. pid
-    s = os.execute(cmd)
-    if s ~= 0 then
-      nixio.syslog('err','Could not kill process ' .. pid.. '. Exit code: '
-      .. s)
+    pid = tonumber(pid)
+    local killed = nixio.kill(pid,15)
+    if not killed then
+      nixio.syslog('err','Could not kill process ' .. pid)
     end
   end
   local DNSMASQ = '/usr/sbin/dnsmasq --conf-file='
@@ -110,8 +109,8 @@ function kill_hostapd(path)
   local pid_path = string.gsub(p,'conf','pid')
   pid = io.popen('/bin/cat ' .. pid_path):read('*l')
   if pid ~= nil then
-    rc = '/bin/kill ' .. pid
-    os.execute(rc)
+    pid = tonumber(pid)
+    nixio.kill(pid,15)
   end
 end
 
