@@ -9,6 +9,8 @@ if s ~= 0 then
   reload.retry_hostapd('/etc/hostapd.0.conf')
 end
 
+nixio.nanosleep(1)
+
 -- kill hostapd support if needed
 local cmd = '/usr/bin/test -e /tmp/nointernet'
 local internet = os.execute(cmd)
@@ -40,6 +42,20 @@ if s ~= 0 then
 end
 
 reload.bridge()
+
+local cmd = '/usr/sbin/brctl show | /bin/grep wlan0'
+local s = os.execute(cmd)
+if s ~= 0 then
+  local cmd = '/usr/sbin/brctl addif bridge1 wlan0 >/dev/null'
+  local x = os.execute(cmd)
+end
+
+local cmd = '/usr/sbin/brctl show | /bin/grep wlan1'
+local s = os.execute(cmd)
+if s ~= 0 then
+  local cmd = '/usr/sbin/brctl addif bridge1 wlan1 >/dev/null'
+  local x = os.execute(cmd)
+end
 
 local check = '/usr/bin/test -e /tmp/dnsmasq.pid'
 local s = os.execute(check)
