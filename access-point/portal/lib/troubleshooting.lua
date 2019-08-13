@@ -3,6 +3,7 @@ local json = require 'luci.jsonc'
 local cst = require 'proxy_constants'
 local date_module = require 'luci.http.protocol.date'
 local sys = require 'luci.sys'
+local util = require 'luci.util'
 
 support = {}
 
@@ -21,8 +22,9 @@ function route()
 end
 
 function swconfig_switch0_port2()
-  cmd = '/sbin/swconfig dev switch0 port 2 show | /usr/bin/tail -n1 | /usr/bin/tr -d "\t"'
-  return io.popen(cmd):read('*l')
+  cmd = '/sbin/swconfig dev switch0 port 2 show | /usr/bin/tail -n1'
+  local res = io.popen(cmd):read('*l')
+  return util.trim(res)
 end
 
 function port(iface)
