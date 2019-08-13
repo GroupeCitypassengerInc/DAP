@@ -300,4 +300,3 @@ if old_schedule ~= new_schedule then
 else
   nixio.syslog('info','schedule is up to date')
 end
-os.exit()
