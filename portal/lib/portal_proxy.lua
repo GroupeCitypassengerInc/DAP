@@ -271,7 +271,7 @@ end
 function proxy.status_user(user_ip,user_mac)
   local params    = {cst.localdb,user_mac,user_ip}
   local select_db = table.concat(params,"/")
-  local cmd_sid   = "/bin/ls " .. select_db .. " >/dev/null 2>&1"
+  local cmd_sid   = "/bin/ls " .. select_db 
   local sid_db,x = helper.command(cmd_sid)
   if x ~= 0 then
     return "Lease. Not in localdb"
