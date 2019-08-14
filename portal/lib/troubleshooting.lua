@@ -67,7 +67,7 @@ function support.has_lease()
   local cmd = '/bin/date +%s'
   local date_now = os.date("%a, %d %b %Y %H:%M:%S GMT")
   date_now = date_module.to_unix(date_now)
-  local lease_time = net_info.data.leasetime
+  local lease_time = ubus_res.data.leasetime
   return date_now - lease_date <= lease_time
 end
 
