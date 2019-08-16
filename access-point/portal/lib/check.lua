@@ -69,6 +69,7 @@ function db.insert_localdb(user_mac,user_ip,sid,secret)
   -- create directories as unique identifiers, to store client data.
   local params = {localdb, user_mac, user_ip}
   local path   = table.concat(params,"/")
+  fs.mkdir(localdb .. "/" .. user_mac)
   local mkdir_ip = fs.mkdir(path)
   if not mkdir_ip then
     return nil
