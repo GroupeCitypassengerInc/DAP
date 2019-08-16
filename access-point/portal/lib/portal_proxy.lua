@@ -59,6 +59,7 @@ function proxy.no_dhcp_lease()
 end
 
 function proxy.initialize_redirected_client(user_ip,user_mac)
+  nixio.syslog("info","Initializing redirected user " .. user_mac)
   -- Send a request to server
   local ap_secret = cst.ap_secret
   local cmd = CURL ..
@@ -125,6 +126,7 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
     mac=user_mac
   }
   -- return a 302
+  nixio.syslog("info","Redirecting user " .. user_mac .. " to portal")
   local rdrinfo = http.build_querystring(query_table)
   redirect(cst.PortalPage .. rdrinfo)
   return true
