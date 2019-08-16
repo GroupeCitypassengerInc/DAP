@@ -34,7 +34,7 @@ function proxy.serve_portal_to_preauthenticated_user(user_mac,user_ip)
   local cmd_sid   = "/bin/ls " .. select_db
   local sid_db    = io.popen(cmd_sid):read("*l")
   local query_table = {
-    session_id=sid,
+    session_id=sid_db,
     mac=user_mac
   }
   local rdrinfo = http.build_querystring(query_table)
@@ -145,6 +145,8 @@ function proxy.validate(user_mac,user_ip,sid,secret)
   local mkdir  = fs.mkdir(path .. "/" .. user_id)
   if mkdir == true then
     authorize_access(user_ip,user_mac)
+    nixio.syslog("info","User with mac " .. user_mac .. " and ip " ..
+    user_ip .. " has been authenticated.")
     return true
   else
     local errno = nixio.errno()
