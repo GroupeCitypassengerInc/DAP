@@ -14,23 +14,27 @@ uhttpd.send("<h2>Diagnostic</h2>\r\n")
 local plugged = troubleshooting.is_port2_plugged()
 if not plugged then
   uhttpd.send("<div>\r\n")
-  uhttpd.send("Your access point is not plugged correctly, so it does not have access to internet. Please check your connections\r\n")
+  uhttpd.send("Your access point is not plugged correctly, so it does not have access to internet. Please check your connections.\r\n")
+  uhttpd.send("If nothing happens please contact our support service with the content of /support, the link is down below (More information) at support@citypassenger.com\r\n")
   uhttpd.send("</div>\r\n")
 else
   local leased = troubleshooting.has_lease()
   if not leased then
     uhttpd.send("<div>\r\n")
     uhttpd.send("Your access point did not get a DHCP lease. Please check your DHCP server.\r\n")
+    uhttpd.send("Send a mail and copy paste the content of /support, the link is down below (More information) to our support serivce: support@citypassenger.com\r\n")
     uhttpd.send("</div>\r\n")
   else
     local has_portal = troubleshooting.has_access_to_portal()
     if not has_portal then
       uhttpd.send("<div>\r\n")
-      uhttpd.send("Your access point can't reach the captive portal. Check your internet connection\r\n")
+      uhttpd.send("Your access point can't reach the captive portal. Check your internet connection.\r\n")
+      uhttpd.send("If your internet connection is OK. Please contact our support our support service with the content of /support, the link is down below (More information) at support@citypassenger.com\r\n")
       uhttpd.send("</div>\r\n")
     else
       uhttpd.send("<div>\r\n")
-      uhttpd.send("Everything seems fine.\r\n")
+      uhttpd.send("Everything seems fine. Wait a minute for your services to come back online.\r\n")
+      uhttpd.send("If you still have access to this page after several minutes. Please contact our support service with the content of /support, the link is down below (More information) at support@citypassenger.com\r\n")
       uhttpd.send("</div>\r\n")
     end
   end
