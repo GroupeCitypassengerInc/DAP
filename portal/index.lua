@@ -57,8 +57,17 @@ function handle_request(env)
     if s == "User in localdb" then
       portal_proxy.serve_portal_to_preauthenticated_user(user_mac,user_ip)
     end
-    portal_proxy.initialize_redirected_client(user_ip,user_mac)
-    return true
+    local path_db = cst.localdb .. "/" .. user_mac
+    local create_user = fs.mkdir(path_db)
+    -- First request
+    if create_user then
+      portal_proxy.initialize_redirected_client(user_ip,user_mac)
+      return true
+    else
+      local errno = nixio.errno()
+      local errmsg = nixio.strerror(errno)
+      nixio.syslog("err",errno .. ": " .. errmsg)
+    end
   end
 
   local params = protocol.urldecode_params(query_string)
@@ -104,7 +113,6 @@ function handle_request(env)
     local user_id = connected["user_id"]
     local date_auth = tonumber(connected["ap_validation"])
     portal_proxy.reauthenticate_user(user_ip,user_mac,sid,secret,date_auth,user_id)
-    portal_proxy.success()
     return true
   end
   -- REAUTH CODE END
@@ -113,27 +121,9 @@ function handle_request(env)
     portal_proxy.serve_portal_to_preauthenticated_user(user_mac,user_ip)
   end
  
-  local path_db = cst.localdb .. "/" .. user_mac
-  local create_user = fs.mkdir(path_db)
-  -- First request
-  if create_user == true then
-    uhttpd.send("Status: 302 Found\r\n")
-    uhttpd.send("Location: http://cloudgate.citypassenger.com/create\r\n")
-    uhttpd.send("Content-Type: text/html\r\n\r\n")
-    return true
-  end
-  if create_user == nil then
-    local errno = nixio.errno()
-    local errmsg = nixio.strerror(errno)
-    nixio.syslog("err",errno .. ": " .. errmsg)
-  end
-      
-  if status == "Lease. Not in localdb" then
-    while true do
-      local i = "/usr/bin/inotifywait -t 1 -r -e create " .. cst.localdb .. "/" .. user_mac
-      local t = os.execute(i)                                                     
-      if t == 0 then break end                                                    
-      break                                                                       
-    end
-  end
+  uhttpd.send("Status: 302 Found\r\n")
+  uhttpd.send("Location: http://cloudgate.citypassenger.com/create\r\n")
+  uhttpd.send("Content-Type: text/html\r\n\r\n")
+  nixio.nanosleep(0,500000000)
+  return true
 end
