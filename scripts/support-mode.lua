@@ -8,6 +8,7 @@ package.path = package.path .. ';/scripts/lib/?.lua'
 nixio = require 'nixio'
 reload = require 'reloader'
 fs = require 'nixio.fs'
+uci = require 'luci.model.uci'
 
 -- Killall hostapd
 x = fs.remove('/tmp/hostapd.0.pid')
@@ -30,14 +31,15 @@ reload.retry_hostapd('/etc/hostapd.support.conf')
 reload.bridge()
 reload.dnsmasq()
 -- Set listen ip for LUCI interface in troubleshooting mode
-local cmd = '/sbin/uci set uhttpd.main.listen_http=172.16.3.2:80'
-local s = os.execute(cmd)
-if s ~= 0 then
-  nixio.syslog('err', cmd .. ' failed with exit code: ' .. s)
+local cursor = uci.cursor()
+local new_value = {}
+new_value[1] = '172.16.3.2:80'
+local set_res = cursor:set('uhttpd','main','listen_http',new_value)
+if not set_res then
+  nixio.syslog('err','failed to set new conf uci')
 end
-local cmd = '/sbin/uci commit uhttpd'
-local s = os.execute(cmd)
-if s ~= 0 then
-  nixio.syslog('err', cmd .. ' failed with exit code: ' .. s)
+local commit = cursor:commit('uhttpd')
+if not commit then
+  nixio.syslog('err','failed to uci commit uhttpd')
 end
 reload.uhttpd()
