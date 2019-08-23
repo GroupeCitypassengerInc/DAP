@@ -11,8 +11,10 @@ local nixio    = require "nixio"
 local fs       = require "nixio.fs"
 local helper   = require "helper"
 local http     = require "luci.http"
+local sys      = require "luci.sys"
 local proxy    = {}
 local CURL     = "/usr/bin/curl "
+
 
 function redirect(url)
   uhttpd.send("Status: 302 Found\r\n")
@@ -42,8 +44,7 @@ function proxy.serve_portal_to_preauthenticated_user(user_mac,user_ip)
 end
 
 function proxy.no_wifi()
-  local cmd = "/sbin/uci get system.@system[0].hostname"
-  local hostname = io.popen(cmd):read("*l")
+  local hostname = sys.hostname()
   if not cst.error_page then
     redirect(cst.PortalUrl .. "/")
   else 
