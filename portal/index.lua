@@ -76,7 +76,7 @@ function handle_request(env)
     else
       local errno = nixio.errno()
       local errmsg = nixio.strerror(errno)
-      nixio.syslog("err",errno .. ": " .. errmsg)
+      nixio.syslog("err","index.lua /create " .. errno .. ": " .. errmsg)
     end
   end
 
