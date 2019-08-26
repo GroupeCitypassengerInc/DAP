@@ -204,7 +204,6 @@ function proxy.deauthenticate_user(user_ip,user_mac)
   local y = os.execute(cmd)
   if y ~= 0 then
     nixio.syslog("err",cmd .. " failed with exit code: " .. y)
-    return false
   end
 end
 
