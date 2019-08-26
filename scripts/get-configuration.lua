@@ -244,6 +244,7 @@ if data.ap.ssid ~= ssid_new then
       nixio.syslog('err','Failed to change ssid in ' .. hostapd_file)
     end
     reload.retry_hostapd(hostapd_file)
+    nixio.syslog('info','ssid in conf file ' .. hostapd_file .. ' has been updated.')
   end
   data.ap.ssid = ssid_new
   parser.save(ini_file,data)
@@ -297,6 +298,7 @@ if old_schedule ~= new_schedule then
   f:close()
   parser.save(ini_file,data)
   os.execute('/etc/init.d/cron restart')
+  nixio.syslog('info','schedule has been updated.')
 else
   nixio.syslog('info','schedule is up to date')
 end
