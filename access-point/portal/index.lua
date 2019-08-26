@@ -6,6 +6,7 @@ local json         = require "luci.jsonc"
 local nixio        = require "nixio"
 local support      = require "troubleshooting"
 local fs           = require "nixio.fs"
+local lease_file   = require "lease_file_reader"
 
 function handle_request(env)
   local url_path = protocol.urldecode(string.sub(env.REQUEST_URI,2))
@@ -31,9 +32,18 @@ function handle_request(env)
 
   local user_ip   = env.REMOTE_ADDR
   local ap_mac    = cst.ap_mac
-  local get_mac   = "/scripts/get-mac-client " .. user_ip
 
-  local user_mac  = io.popen(get_mac):read("*l")
+  local leases    = "/tmp/dhcp.leases"
+  local f         = io.open(leases)
+  local user_mac  = nil
+  for line in f:lines() do
+    if lease_file.get_ip(line) == user_ip then
+      user_mac = lease_file.get_mac(line)
+      break
+    end
+  end
+  f:close()
+
   if not user_mac then
     portal_proxy.no_dhcp_lease()
     os.exit()
