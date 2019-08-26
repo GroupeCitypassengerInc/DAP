@@ -228,7 +228,6 @@ function proxy.reauthenticate_user(user_ip,user_mac,sid,secret,date_auth,user_id
     nixio.syslog("err","Failed to set date on localdb file")
     return false
   end
-  nixio.syslog("info","reauthenticate")
   authorize_access(user_ip,user_mac)
   return true
 end
