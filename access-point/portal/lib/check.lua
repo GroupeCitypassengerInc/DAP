@@ -40,7 +40,7 @@ function db.select_localdb(user_mac,user_ip,sid,secret)
   if not stat then
     local errno = nixio.errno()
     local errmsg = nixio.strerror(errno)
-    nixio.syslog("err", errno .. ": " .. errmsg)
+    nixio.syslog("err", "check.lua select_localdb: " ..  errno .. ": " .. errmsg)
     return false
   end
   return true
@@ -80,9 +80,9 @@ function db.insert_localdb(user_mac,user_ip,sid,secret)
   if mkdir == true then
     return true
   else
-    local errno = nixio.errno()                                                 
-    local errmsg = nixio.strerror(errno)                                        
-    nixio.syslog("err", errno .. ": " .. errmsg)                                
+    local errno = nixio.errno()
+    local errmsg = nixio.strerror(errno)
+    nixio.syslog("err", "check.lua insert_localdb: " .. errno .. ": " .. errmsg)
     return false
   end
 end

@@ -157,7 +157,7 @@ function proxy.validate(user_mac,user_ip,sid,secret)
     if errno == 17 then
       return true
     end
-    nixio.syslog("err", errno .. ": " .. errmsg)
+    nixio.syslog("err", "portal_proxy.lua validate: " .. errno .. ": " .. errmsg)
     return false
   end
 end
