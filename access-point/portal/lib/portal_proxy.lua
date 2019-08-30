@@ -40,6 +40,10 @@ function proxy.serve_portal_to_preauthenticated_user(user_mac,user_ip)
     mac=user_mac
   }
   local rdrinfo = http.build_querystring(query_table)
+  local query_start_index = string.find(cst.PortalPage,"%?")
+  if query_start_index then
+    rdrinfo = string.gsub(rdrinfo,"%?","%&")
+  end
   redirect(cst.PortalPage .. rdrinfo)
 end
 
@@ -129,6 +133,10 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
   -- return a 302
   nixio.syslog("info","Redirecting user " .. user_mac .. " to portal")
   local rdrinfo = http.build_querystring(query_table)
+  local query_start_index = string.find(cst.PortalPage,"%?")
+  if query_start_index then
+    rdrinfo = string.gsub(rdrinfo,"%?","%&")
+  end
   redirect(cst.PortalPage .. rdrinfo)
   return true
 end
