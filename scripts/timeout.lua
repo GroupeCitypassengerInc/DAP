@@ -66,6 +66,8 @@ for mac in macs:lines() do
     cmd = string.format(cmd,mac)
     local res = os.execute(cmd)
     if res ~= 0 then
+      local ip = io.popen("/bin/ls " .. cst.localdb .. "/" .. mac):read("*l")
+      portal_proxy.deauthenticate_user(ip,mac) 
       local rm = "/bin/rm -rf %s/%s"
       rm = string.format(rm,cst.localdb,mac)
       local x = os.execute(rm)
