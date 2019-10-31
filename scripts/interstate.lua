@@ -23,6 +23,9 @@ if has_portal then
     create_file .. '. Exit code: ' .. x)
   end
   fs.remove(file_nointernet)
+  fs.remove('/tmp/8888.lock')
+  local cmd = '/usr/sbin/iptables -D INPUT -p tcp -m tcp --dport 8888 -m conntrack --ctstate NEW -j ACCEPT'
+  os.execute(cmd)
   dofile('/scripts/get-configuration.lua')
   dofile('/scripts/start-ap-services.lua')
 else

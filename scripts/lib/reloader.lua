@@ -83,7 +83,7 @@ function r.retry_hostapd(path)
   if wlanif == false then
     return false
   end
-  while true do
+  for i=1,3 do
     s = start_hostapd(path)
     if s == true then
       if is_wlan_up(wlanif) then

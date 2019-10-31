@@ -4,11 +4,14 @@
 --  in order to display page with AP informations.
 --
 --]]
+package.path = package.path .. ';/portal/lib/?.lua'
 package.path = package.path .. ';/scripts/lib/?.lua'
 nixio = require 'nixio'
 reload = require 'reloader'
 fs = require 'nixio.fs'
 uci = require 'luci.model.uci'
+portal = require 'portal_proxy'
+lease  = require 'lease_file_reader'
 
 -- Killall hostapd
 x = fs.remove('/tmp/hostapd.0.pid')
@@ -30,10 +33,26 @@ nixio.nanosleep(1)
 reload.retry_hostapd('/etc/hostapd.support.conf')
 reload.bridge()
 reload.dnsmasq()
+local lock = fs.mkdir('/tmp/8888.lock')
+if lock then
+  local cmd = '/usr/sbin/iptables -A INPUT -p tcp -m tcp --dport 8888 -m conntrack --ctstate NEW -j ACCEPT'
+  local x = os.execute(cmd)
+  if x ~= 0 then
+    syslog.nixio('err','support mode: failed to enable rule ' .. cmd)
+  end
+end
+
+local user_list = io.open('/tmp/dhcp.leases')
+for line in user_list:lines() do
+  local user_ip = lease.get_ip(line)
+  local user_mac = lease.get_mac(line)
+  portal.deauthenticate_user(user_ip,user_mac)
+end
+
 -- Set listen ip for LUCI interface in troubleshooting mode
 local cursor = uci.cursor()
 local new_value = {}
-new_value[1] = '172.16.3.2:80'
+new_value[1] = '10.168.168.1:8888'
 local set_res = cursor:set('uhttpd','main','listen_http',new_value)
 if not set_res then
   nixio.syslog('err','failed to set new conf uci')

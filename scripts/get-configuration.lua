@@ -30,7 +30,7 @@ local sys    = require 'luci.sys'
 
 -- API Call - GET /ws/DAP/{mac}
  
-local path_addr = '/sys/devices/platform/ag71xx.0/net/eth0/address'
+local path_addr = '/sys/devices/platform/soc/c080000.edma/net/eth0/address'
 local ini_file = '/etc/proxy.ini'
 local mac = io.popen('/bin/cat ' .. path_addr):read('*l')
 local api_key = io.popen('/bin/cat /root/.ssh/apikey'):read('*l')
