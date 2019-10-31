@@ -22,7 +22,7 @@ function route()
 end
 
 function swconfig_switch0_port2()
-  cmd = '/sbin/swconfig dev switch0 port 2 show | /usr/bin/tail -n1'
+  cmd = '/sbin/swconfig dev switch0 port 5 show | /usr/bin/tail -n1'
   local res = io.popen(cmd):read('*l')
   return util.trim(res)
 end
@@ -54,12 +54,12 @@ end
 
 function support.is_port2_plugged()
   local link_info = swconfig_switch0_port2()
-  local link_up = "link: port:2 link:up speed:100baseT full-duplex txflow rxflow auto"
+  local link_up = "link: port:5 link:up speed:100baseT full-duplex txflow rxflow auto"
   return link_info == link_up
 end
 
 function support.has_lease()
-  local ubus_res = util.ubus('network.interface.cfg036d96','status')
+  local ubus_res = util.ubus('network.interface.wan','status')
   local lease_date = ubus_res.data.date
   if not lease_date then
     return false
@@ -76,7 +76,7 @@ function support.has_access_to_portal()
     return false
   end
   local host = cst.PortalUrl:match('^%w+://([^/]+)')
-  local cmd = '/usr/bin/nc -w2 -zv %s 443 2> /dev/null'
+  local cmd = '/bin/echo | /usr/bin/nc -w2 %s 443'
   check_connectivity = string.format(cmd,host)
   local res = os.execute(check_connectivity)
   return res == 0
@@ -98,10 +98,10 @@ function support.troubleshoot()
   uhttpd.send(swconfig_switch0_port2())
   uhttpd.send('\r\n')
   uhttpd.send('======= PORTS =======\r\n')
-  uhttpd.send('INTERFACE eth0.10 (POE)\r\n')
-  uhttpd.send(port('eth0.10'))
-  uhttpd.send('INTERFACE eth0.1 \r\n')
-  uhttpd.send(port('eth0.1'))
+  uhttpd.send('INTERFACE eth1 (POE)\r\n')
+  uhttpd.send(port('eth1'))
+  uhttpd.send('INTERFACE eth0 \r\n')
+  uhttpd.send(port('eth0'))
   uhttpd.send('\r\n') 
   uhttpd.send('======= ROUTE =======\r\n')
   uhttpd.send(route())
