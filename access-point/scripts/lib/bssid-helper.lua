@@ -7,7 +7,7 @@ function format_mask(s)
   return s
 end
 
-local path_addr = '/sys/devices/platform/ag71xx.0/net/eth0/address'
+local path_addr = '/sys/devices/platform/soc/c080000.edma/net/eth0/address'
 local mac = io.popen('/bin/cat ' .. path_addr):read('*l')
 local base_bssid = '70:b3:d5:e7:e'
 local m = string.sub(mac,14,17)
