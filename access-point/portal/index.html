@@ -1,0 +1,52 @@
+<html>
+  <head>
+  </head>
+  <body>
+    <div>
+      <center><img src="loading.gif"></center>
+      <div id="error-text">
+      </div>
+    </div>
+    <script src="jquery.js"></script>
+    <script>
+      $.ajax({
+        url: "/ws/wifi/create",
+        method: "GET"
+      }).done(function(data) {
+        data = JSON.parse(data);
+        if (data.url == '100') {
+          $("#error-text").html(function () {
+            return "<p>Response from digilan-token-action=create was nil</p>";  
+          });
+          return false;
+        }
+        if (data.url == '101') {
+          $("#error-text").html(function () {
+            return "<p>Failed to insert new user in wp db</p>";  
+          });
+          return false;
+        }
+        if (data.url == '102') {
+          $("#error-text").html(function () {
+            return "<p>Could not insert in localdb invalid data</p>";  
+          });
+          return false;
+        }
+        if (data.url.match(/^curl_error \d+$/)) {
+          $("#error-text").html(function () {
+            return "<p>digilan-token-action=create "+data.url+"</p>";  
+          });
+          return false;
+        }
+        window.location.replace(data.url);
+      }).fail(function (err, textStatus){
+        $("#error-text").html(function () {
+          return "<p>"+textStatus+"</p>";
+        });
+      });
+    </script>
+  </body>
+  <footer>
+    v 1.0
+  </footer>
+</html>

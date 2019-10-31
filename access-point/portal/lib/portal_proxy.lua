@@ -44,7 +44,7 @@ function proxy.serve_portal_to_preauthenticated_user(user_mac,user_ip)
   if query_start_index then
     rdrinfo = string.gsub(rdrinfo,"%?","%&")
   end
-  redirect(cst.PortalPage .. rdrinfo)
+  return cst.PortalPage .. rdrinfo
 end
 
 function proxy.no_wifi()
@@ -78,7 +78,7 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
   response,exit = helper.command(cmd)
   if exit ~= 0 then
     nixio.syslog('err','connection create: cURL failed with exit code: '..exit)
-    return false
+    return 'curl_error ' .. exit
   end
   response = json.parse(response)
   
@@ -88,16 +88,11 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
     if x ~= 0 then
       nixio.syslog("err", cmd .. " Failed with exit code: " .. x)
     end
-    return false
+    return '100'
   end
 
   if response.validated == false then
-    uhttpd.send("Status: 400 Bad Request\r\n")
-    uhttpd.send("Content-Type: text/html\r\n")
-    uhttpd.send("\r\n\r\n")
-    stringified_resp = json.stringify(response)
-    uhttpd.send(stringified_resp)
-    return false
+    return '101'
   end
 
   -- store sid and secret in local db
@@ -111,19 +106,7 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
   end
  
   if not insert then
-    local data_table = {
-      message="invalid parameters", 
-      user_mac=user_mac, 
-      user_ip=user_ip,
-      session_id=sid,
-      secret=secret
-    }
-    data_table_stringified = json.stringify(data_table)
-    uhttpd.send("Status: 406 Not Acceptable.\r\n")
-    uhttpd.send("Content-Type: text/html\r\n")
-    uhttpd.send("\r\n\r\n")
-    uhttpd.send(data_table_stringified)
-    return false
+    return '102'
   end
  
   local query_table = {
@@ -137,8 +120,7 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
   if query_start_index then
     rdrinfo = string.gsub(rdrinfo,"%?","%&")
   end
-  redirect(cst.PortalPage .. rdrinfo)
-  return true
+  return cst.PortalPage .. rdrinfo
 end
 
 function proxy.validate(user_mac,user_ip,sid,secret)
