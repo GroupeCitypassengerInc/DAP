@@ -18,6 +18,18 @@ local helper = require 'helper'
 local bssid  = require 'bssid-helper'
 local ini    = require 'check_config_changes'
 local sys    = require 'luci.sys'
+local uci    = require 'luci.model.uci'
+
+--[[
+--
+--  GET PUBLIC IP
+--
+--]]
+local cmd = '/usr/bin/curl -s --fail -m3 -o /tmp/public.ip "https://eth0.me"'
+local s = os.execute(cmd)
+if not s == 0 then
+  nixio.syslog('err','Failed to get public ip')
+end
 
 ------------------------
 --------- GET CONFIG CITYSCOPE
@@ -30,7 +42,7 @@ local sys    = require 'luci.sys'
 
 -- API Call - GET /ws/DAP/{mac}
  
-local path_addr = '/sys/devices/platform/soc/c080000.edma/net/eth0/address'
+local path_addr = '/sys/devices/platform/soc/c080000.edma/net/eth1/address'
 local ini_file = '/etc/proxy.ini'
 local mac = io.popen('/bin/cat ' .. path_addr):read('*l')
 local api_key = io.popen('/bin/cat /root/.ssh/apikey'):read('*l')
@@ -44,6 +56,8 @@ local data =
   },
   ap=
   {
+    rescue_host='',
+    identity_file='/root/.ssh/host_key',
     timeout=7200,
     mac_addr=path_addr,
     secret='',
@@ -60,12 +74,18 @@ local data =
 
 resp = nil
 
+endpoint = io.open("/etc/cityscope.conf"):read("*l")
+if not endpoint then
+  nixio.syslog("err","No endpoint to cityscope")
+  return
+end
+
 if not api_key then
   resp = nil
 else
   local cmd  = '/usr/bin/curl --retry 3 --retry-delay 20 --fail -m 10 --connect-timeout 10 -s -H "CityscopeApiKey: %s" ' .. 
-  '-H "accept: application/json" "https://preprod.citypassenger.com/ws/DAP/%s"'
-  local cmd = string.format(cmd,api_key,mac)
+  '-H "accept: application/json" "%s/%s"'
+  local cmd = string.format(cmd,api_key,endpoint,mac)
   resp,exit = helper.command(cmd)
   if exit ~= 0 then
     nixio.syslog('err',cmd..' failed with exit code: '..exit)
@@ -78,11 +98,10 @@ url = nil
 secret = nil
 
 if not resp then
-  parser.save(ini_file,data)
   nixio.syslog('info','No secret and URL.')
   os.exit(1)
 else
-  url = resp['portalUrl']
+  url = resp['url']
   secret = resp['secret']
   local cmd = '/usr/bin/test -e ' .. ini_file
   local c   = os.execute(cmd)
@@ -108,6 +127,57 @@ else
     reload.uhttpd()
   end
 end
+
+--- UPDATE HOST KEY
+local cmd = '/usr/bin/dropbearconvert dropbear openssh ' .. data.ap.identity_file .. ' /tmp/host_key_openssh'
+os.execute(cmd)
+local f = io.open('/tmp/host_key_openssh','r')
+local current_host_key = f:read('*a')
+f:close()
+local new_host_key = resp['hostKeySsh']
+if not new_host_key then
+  new_host_key = ''
+end
+if current_host_key ~= new_host_key then
+  local f = io.open('/tmp/host_key_new_openssh','w')
+  new_host_key = string.gsub(new_host_key,'%\\n','\n')
+  f:write(new_host_key)
+  f:close()
+  local cmd = '/usr/bin/dropbearconvert openssh dropbear /tmp/host_key_new_openssh ' .. data.ap.identity_file
+  os.execute(cmd)
+  nixio.syslog('info', 'Host key ssh has been updated')
+else
+  nixio.syslog('info','Host key ssh is up to date')
+end
+
+--- UPDATE RESCUE HOST
+local d = parser.load(ini_file) 
+local current_rescue_host = d.ap.rescue_host
+local new_rescue_host = resp['rescuehost']
+if not resp['rescuehost'] then
+  new_rescue_host = ''
+end
+if current_rescue_host ~= new_rescue_host then
+  -- Update in ini file and uci
+  local d = parser.load(ini_file) 
+  d.ap.rescue_host = new_rescue_host
+  parser.save(ini_file,d)  
+  local cursor = uci.cursor()
+  local new_value = {}
+  new_value[1] = '-i /root/.ssh/host_key -N -T '..new_rescue_host
+  local set_res = cursor:set('autossh','@autossh[0]','ssh',new_value)
+  if not set_res then
+    nixio.syslog('err','failed to set new conf uci')
+  end
+  local commit = cursor:commit('autossh')
+  if not commit then
+    nixio.syslog('err','failed to uci commit uhttpd')
+  end
+  nixio.syslog('info', 'Rescue host has been updated')
+else
+  nixio.syslog('info', 'Rescue host is up to date')
+end
+
 
 --- UPDATE HOSTAPD HEADER (HARDWARE CONFIGURATION)
 local hardware_new = ''
@@ -158,7 +228,7 @@ if not url then
   nixio.syslog('warning','No portal URL')
   return false
 end
-domain = url:match('^%w+://([^/]+)')
+domain = url:match('^%w+://([^:/]+)')
 
 -- Checks if portal is in white list
 local cmd = '/bin/grep "' .. domain .. '" /etc/dnsmasq-white.conf > /dev/null'
@@ -176,25 +246,44 @@ elseif x ~= 0 then
 end
 
 ------------------------
+--------- RESOLVE PORTAL
+------------------------
+local cmd = '/scripts/test_dns %s'
+local cmd = string.format(cmd,domain)
+local dns = os.execute(cmd)
+if dns ~= 0 then
+  nixio.syslog('err','Failed to resolve portal: '..domain)
+  os.exit(1)
+end
+local f = io.open('/tmp/dns_portal','r')
+local ip_portal = f:read('*l')
+f:close()
+
+------------------------
 --------- GET CONFIG WORDPRESS 
 ------------------------
 
 --- SEND HOSTNAME TO WP
 
-local cmd = '/usr/bin/curl --retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "%s/index.php?' ..
-'digilan-token-action=add&digilan-token-secret=%s&hostname=%s&mac=%s"'
-local cmd = string.format(cmd,url,secret,hostname,mac)
+local cmd = '/scripts/add_access_point %s %s %s %s'
+local cmd = string.format(cmd,secret,url .. '/index.php',ip_portal,domain)
 
-while true do
-  response,exit = helper.command(cmd)
-  if exit ~= 0 then
-    nixio.syslog('err','cURL exit code: '..exit)
-    os.exit(exit)
-  end
-  wp_reg = json.parse(response)
-  if wp_reg then
-    break
-  end
+response,exit = helper.command(cmd)
+if exit ~= 0 then
+  nixio.syslog('err','cURL exit code: '..exit)
+  os.exit(exit)
+end
+if response ~= 200 then
+  nixio.syslog('err','cURL response: '..response)
+  os.exit(response)
+end
+local f = io.open('/tmp/add_wordpress','r')
+local conf = f:read('*a')
+f:close()
+wp_reg = json.parse(conf)
+if not wp_reg then
+  nixio.syslog('err','Could not add hostname to portal')
+  os.exit(1)
 end
 
 if wp_reg['message'] == 'created' then
@@ -208,20 +297,25 @@ end
 
 --- GET SETTINGS FROM WORDPRESS
 
-local cmd = '/usr/bin/curl --retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "%s/index.php?' ..
-'digilan-token-action=configure&digilan-token-secret=%s&hostname=%s"'
-local cmd = string.format(cmd,url,secret,hostname)
+local cmd = '/scripts/get_config_curl %s %s %s %s'
+local cmd = string.format(cmd,secret,url .. '/index.php',ip_portal,domain)
 
-while true do
-  response,exit = helper.command(cmd)
-  if exit ~= 0 then
-    nixio.syslog('err','cURL exit code: '..exit)
-    os.exit(exit)
-  end
-  wp_resp = json.parse(response)
-  if wp_resp then
-    break
-  end
+response,exit = helper.command(cmd)
+if exit ~= 0 then
+  nixio.syslog('err','cURL exit code: '..exit)
+  os.exit(exit)
+end
+if response ~= 200 then
+  nixio.syslog('err','cURL response: '..response)
+  os.exit(response)
+end
+local f = io.open('/tmp/config_wordpress','r')
+local conf = f:read('*a')
+f:close()
+wp_resp = json.parse(conf)
+if not wp_resp then
+  nixio.syslog('err','failed to add hostname on portal')
+  os.exit(1)
 end
 
 --- LOAD CURRENT INI FILE
@@ -279,26 +373,31 @@ new = wp_resp['error_page']
 res = ini.update_config(old,new,data,'portal','error_page')
 if res then reload.uhttpd() end
 
---- UPDATE SCHEDULE
-local old_schedule = data.ap.schedule
-local new_schedule = wp_resp['schedule']['on']..wp_resp['schedule']['off']
-if old_schedule ~= new_schedule then
-  local sed = "/bin/sed -ri '/(en|dis)able-wifi.lua/d' /etc/crontabs/root"
-  local x = os.execute(sed)
+-- UPDATE COUNTRY CODE
+local country_code_new = wp_resp['country_code']
+if data.ap.country_code ~= country_code_new then
+  local cmd = '/usr/bin/killall hostapd'
+  local x = os.execute(cmd)
   if x ~= 0 then
-    nixio.syslog('err',sed..' failed with exit code: '..x)
-    os.exit(x)
+    nixio.syslog('warning','No hostapd killed.')
   end
-  data.ap.schedule = new_schedule
-  local on = string.gsub(wp_resp['schedule']['on'],'%\\n','\n')
-  local off = string.gsub(wp_resp['schedule']['off'],'%\\n','\n')
-  f = io.open('/etc/crontabs/root','a')
-  f:write(on)
-  f:write(off)
-  f:close()
+  nixio.nanosleep(1)
+  change_country_code = "/bin/sed -i 's#^country_code=.*#country_code=%s#g' %s"
+  for hostapd_file in pairs(resp['files']) do
+    local s = string.format(change_country_code,country_code_new,hostapd_file)
+    local t = os.execute(s)
+    if t ~= 0 then
+      nixio.syslog('err','Failed to change country code in ' .. hostapd_file)
+    end
+    reload.retry_hostapd(hostapd_file)
+    nixio.syslog('info','country code in conf file ' .. hostapd_file .. ' has been updated')
+  end
+  data.ap.country_code = country_code_new
   parser.save(ini_file,data)
-  os.execute('/etc/init.d/cron restart')
-  nixio.syslog('info','schedule has been updated.')
+  reload.bridge()
+  reload.dnsmasq()
 else
-  nixio.syslog('info','schedule is up to date')
+  nixio.syslog('info','country code is up to date')
 end
+
+os.exit(0)
