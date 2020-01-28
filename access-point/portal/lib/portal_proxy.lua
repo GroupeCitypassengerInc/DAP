@@ -13,8 +13,6 @@ local helper   = require "helper"
 local http     = require "luci.http"
 local sys      = require "luci.sys"
 local proxy    = {}
-local CURL     = "/usr/bin/curl "
-
 
 function redirect(url)
   uhttpd.send("Status: 302 Found\r\n")
@@ -67,12 +65,14 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
   nixio.syslog("info","Initializing redirected user " .. user_mac)
   -- Send a request to server
   local ap_secret = cst.ap_secret
-  local cmd = CURL ..
-  '--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "' .. 
-  cst.PortalUrl .. 
-  '/index.php?digilan-token-action=create&user_ip=' .. 
-  user_ip ..'&ap_mac=' .. cst.ap_mac .. 
-  '&digilan-token-secret=' .. ap_secret .. '"' 
+  local cmd = '/usr/bin/curl --retry 3 --retry-delay 5 -m 10 --connect-timeout 10 '
+            ..'--fail -G '
+            ..'--data-urlencode "digilan-token-action=create" '
+            ..'--data-urlencode "user_ip=%s" '
+            ..'--data-urlencode "ap_mac=%s" '
+            ..'--data-urlencode "digilan-token-secret=%s" '
+            ..'"%s"'
+  cmd = string.format(cmd, user_ip, ap_mac, ap_secret, cst.PortalUrl .. '/index.php')
   -- server responds with secret and sid
 
   response,exit = helper.command(cmd)
@@ -154,21 +154,22 @@ end
 
 function validate_data_on_server(user_ip,user_mac,secret,sid)
   local ap_secret = cst.ap_secret
-  local cmd  = CURL ..'--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "' 
-  .. cst.PortalUrl .. '/index.php?digilan-token-action=validate&user_ip='
-  .. user_ip .. '&ap_mac='.. cst.ap_mac ..
-  '&secret=' .. secret .. '&session_id=' .. sid ..'&digilan-token-secret=' .. ap_secret.. '"'
-  while true do
-    response,exit = helper.command(cmd)
-    if exit ~= 0 then
-      nixio.syslog('err','validate. cURL failed with exit code:'..exit)
-      return false
-    end
-    response = json.parse(response)
-    if response ~= nil then
-      break
-    end
+  local cmd = '/usr/bin/curl --retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 '
+            ..'-G '
+            ..'--data-urlencode "digilan-token-action=validate"'
+            ..'--data-urlencode "user_ip=%s"'
+            ..'--data-urlencode "ap_mac=%s"'
+            ..'--data-urlencode "secret=%s"'
+            ..'--data-urlencode "session_id=%s"'
+            ..'--data-urlencode "digilan-token-secret=%s"'
+            ..'--data-urlencode "%s"'
+  local cmd = string.format(cmd,user_ip,cst.ap_mac,secret,sid,ap_secret,cst.PortalUrl..'/index.php')
+  response,exit = helper.command(cmd)
+  if exit ~= 0 then
+    nixio.syslog('err','validate. cURL failed with exit code:'..exit)
+    return false
   end
+  response = json.parse(response)
   local r = response.authenticated
   local user_id	= response.user_id
   if r == true then
@@ -262,20 +263,25 @@ function authorize_access(user_ip,user_mac)
 end
 
 function proxy.has_user_been_connected(mac)
-  local cmd  = CURL ..'--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s -L "'                          
+  local cmd  = CURL ..'--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s "'                          
   .. cst.PortalUrl .. '/index.php?digilan-token-action=reauth&mac='.. mac ..                                          
   '&digilan-token-secret=' .. cst.ap_secret.. '"'
-  while true do
-    local connection,exit = helper.command(cmd)
-    if exit == 0 then
-      connection = json.parse(connection)
-      return connection
-    else
-      nixio.syslog("err",cmd .. " failed with exit code: " .. exit)
-      break
-    end
+  local cmd = '/usr/bin/curl --retry 3 --retry-delay 5 '
+            ..'--fail -m 10 --connect-timeout 10 '
+            ..'-G '
+            ..'--data-urlencode "digilan-token-action=reauth" '
+            ..'--data-urlencode "mac=%s" '
+            ..'--data-urlencode "digilan-token-secret=%s" '
+            ..'"%s"'
+  cmd = string.format(cmd, mac, cst.ap_secret, cst.PortalUrl ..'/index.php')
+  local connection,exit = helper.command(cmd)
+  if exit == 0 then
+    connection = json.parse(connection)
+    return connection
+  else
+    nixio.syslog("err",cmd .. " failed with exit code: " .. exit)
+    return false
   end
-  return false
 end
 
 function proxy.status_user(user_ip,user_mac)
