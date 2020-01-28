@@ -72,7 +72,7 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
             ..'--data-urlencode "ap_mac=%s" '
             ..'--data-urlencode "digilan-token-secret=%s" '
             ..'"%s"'
-  cmd = string.format(cmd, user_ip, ap_mac, ap_secret, cst.PortalUrl .. '/index.php')
+  cmd = string.format(cmd, user_ip, cst.ap_mac, ap_secret, cst.PortalUrl .. '/index.php')
   -- server responds with secret and sid
 
   response,exit = helper.command(cmd)
@@ -156,13 +156,13 @@ function validate_data_on_server(user_ip,user_mac,secret,sid)
   local ap_secret = cst.ap_secret
   local cmd = '/usr/bin/curl --retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 '
             ..'-G '
-            ..'--data-urlencode "digilan-token-action=validate"'
-            ..'--data-urlencode "user_ip=%s"'
-            ..'--data-urlencode "ap_mac=%s"'
-            ..'--data-urlencode "secret=%s"'
-            ..'--data-urlencode "session_id=%s"'
-            ..'--data-urlencode "digilan-token-secret=%s"'
-            ..'--data-urlencode "%s"'
+            ..'--data-urlencode "digilan-token-action=validate" '
+            ..'--data-urlencode "user_ip=%s" '
+            ..'--data-urlencode "ap_mac=%s" '
+            ..'--data-urlencode "secret=%s" '
+            ..'--data-urlencode "session_id=%s" '
+            ..'--data-urlencode "digilan-token-secret=%s" '
+            ..'"%s"'
   local cmd = string.format(cmd,user_ip,cst.ap_mac,secret,sid,ap_secret,cst.PortalUrl..'/index.php')
   response,exit = helper.command(cmd)
   if exit ~= 0 then
@@ -263,9 +263,6 @@ function authorize_access(user_ip,user_mac)
 end
 
 function proxy.has_user_been_connected(mac)
-  local cmd  = CURL ..'--retry 3 --retry-delay 5 --fail -m 10 --connect-timeout 10 -s "'                          
-  .. cst.PortalUrl .. '/index.php?digilan-token-action=reauth&mac='.. mac ..                                          
-  '&digilan-token-secret=' .. cst.ap_secret.. '"'
   local cmd = '/usr/bin/curl --retry 3 --retry-delay 5 '
             ..'--fail -m 10 --connect-timeout 10 '
             ..'-G '
