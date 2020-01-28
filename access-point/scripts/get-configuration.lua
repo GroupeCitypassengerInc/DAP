@@ -164,7 +164,7 @@ if current_rescue_host ~= new_rescue_host then
   parser.save(ini_file,d)  
   local cursor = uci.cursor()
   local new_value = {}
-  new_value[1] = '-i /root/.ssh/host_key -N -T '..new_rescue_host
+  new_value[1] = '-i /root/.ssh/host_key -R 2222:localhost:22 support@'..new_rescue_host
   local set_res = cursor:set('autossh','@autossh[0]','ssh',new_value)
   if not set_res then
     nixio.syslog('err','failed to set new conf uci')
@@ -223,7 +223,6 @@ end
 --  UPDATE DNSMASQ WHITE LIST FILE
 --
 --]]
-
 if not url then
   nixio.syslog('warning','No portal URL')
   return false
@@ -235,9 +234,13 @@ local cmd = '/bin/grep "' .. domain .. '" /etc/dnsmasq-white.conf > /dev/null'
 local x = os.execute(cmd)
 if x == 256 then
   -- Append portal url to white list
-  local f = io.open('/etc/dnsmasq-white.conf','a')
-  f:write(domain)
+  local f = io.open('/etc/dnsmasq-white.template','r')
+  local hosts = f:read('*a')
   f:close()
+  hosts = string.gsub(hosts, '%%%%portal_host%%%%', domain)
+  local g = io.open('/etc/dnsmasq-white.conf','w+')
+  g:write(hosts)
+  g:close()
   nixio.syslog('info','Updated whitelist.')
   reload.dnsmasq()
 elseif x ~= 0 then
