@@ -1,0 +1,21 @@
+#!/bin/sh
+
+hostname=$(/bin/cat /proc/sys/kernel/hostname)
+secret=${1?none}
+url=${2?none}
+ip=${3?none}
+host=${4?none}
+
+/usr/bin/curl --fail \
+-m 10 \
+-G \
+--data-urlencode "digilan-token-action=configure" \
+--data-urlencode "hostname=$hostname" \
+--data-urlencode "digilan-token-secret=$secret" \
+-o /tmp/config_wordpress \
+-w %{http_code} \
+--resolve "$host:443:$ip" \
+--resolve "$host:80:$ip" \
+--retry 3 --retry-delay 5 \
+--connect-timeout 3 \
+$url 2>/tmp/get_config_err
