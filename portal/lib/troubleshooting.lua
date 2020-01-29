@@ -4,6 +4,8 @@ local cst = require 'proxy_constants'
 local date_module = require 'luci.http.protocol.date'
 local sys = require 'luci.sys'
 local util = require 'luci.util'
+local nixio = require 'nixio'
+local data = require 'LIP'
 
 support = {}
 
@@ -27,11 +29,6 @@ function swconfig_switch0_port2()
   return util.trim(res)
 end
 
-function port(iface)
-  cmd = '/bin/cat /proc/' .. iface
-  return io.popen(cmd):read('*a')
-end
-
 function ifconfig()
   cmd = '/sbin/ifconfig -a'
   return io.popen(cmd):read('*a')
@@ -42,14 +39,25 @@ function get_dhcp_leases()
   return io.popen(cmd):read('*a')
 end
 
-function dig()
-  cmd = '/usr/bin/dig hosts @8.8.8.8'
+function traceroute()
+  cmd = '/bin/traceroute -4 8.8.8.8'
   return io.popen(cmd):read('*a')
 end
 
-function traceroute()
-  cmd = '/usr/bin/traceroute -4 8.8.8.8'
-  return io.popen(cmd):read('*a')
+function support.get_autossh_status()
+  local pgrep = '/usr/bin/pgrep autossh > /dev/null'
+  local x = os.execute(pgrep)
+  return x == 0
+end
+
+function support.start_autossh()
+  os.execute('/etc/init.d/autossh start')
+  nixio.syslog('info','Autossh service has been started')
+end
+
+function support.stop_autossh()
+  os.execute('/etc/init.d/autossh stop') 
+  nixio.syslog('info','Autossh service has been stopped')
 end
 
 function support.is_port2_plugged()
@@ -59,7 +67,9 @@ function support.is_port2_plugged()
 end
 
 function support.has_lease()
-  local ubus_res = util.ubus('network.interface.wan','status')
+  local cmd = '/bin/ubus call network.interface.wan status'
+  local rc = io.popen(cmd):read('*a')
+  local ubus_res = json.parse(rc)
   local lease_date = ubus_res.data.date
   if not lease_date then
     return false
@@ -75,11 +85,79 @@ function support.has_access_to_portal()
   if not cst.PortalUrl then
     return false
   end
-  local host = cst.PortalUrl:match('^%w+://([^/]+)')
+  local host = cst.PortalUrl:match('^%w+://([^:/]+)')
   local cmd = '/bin/echo | /usr/bin/nc -w2 %s 443'
   check_connectivity = string.format(cmd,host)
   local res = os.execute(check_connectivity)
   return res == 0
+end
+
+function get_public_ip()
+  local f = io.open('/tmp/public.ip','r')
+  local public_ip = f:read('*l')
+  f:close()
+  if not public_ip then
+    public_ip = 'Could not get public ip'
+  end
+  return public_ip
+end
+
+function curl_get_config(curl_file)
+  local f = io.open(curl_file,'r')
+  local s = f:read('*a')
+  f:close()
+  return s
+end
+
+function curl_admin_citypassenger()
+  local f = io.open('/etc/cityscope.conf')
+  local url = f:read('*l')
+  f:close()
+  local conf = data.load('/etc/proxy.ini')
+  local g = io.open(conf['ap']['mac_addr'])
+  local mac = g:read('*l')
+  g:close()
+  local api = url .. '/' .. mac
+  local f = io.open('/root/.ssh/apikey')
+  local key = f:read('*l')
+  f:close()
+  local curl = '/usr/bin/curl --fail -m3 -H "CityscopeApiKey: '..key..'" "'..api..'"'
+  local r = io.popen(curl):read('*a')
+  local res = json.parse(r)
+  if not res then
+    return 'Could not get configuration from cityscope'
+  end
+  local portal = res['url']
+  if not portal then
+    return 'This AP is not linked to any portal'
+  else 
+    return portal
+  end
+end
+
+function logread()
+  local f = io.popen('/sbin/logread')
+  local log = f:read('*a')
+  f:close()
+  return log
+end
+
+function get_version()
+  local f = io.open('/etc/solo.version','r')
+  local version = f:read('*l')
+  f:close()
+  return version
+end
+
+function resolve_portal()
+  local f = io.open('/tmp/dns_portal','r')
+  portal_ip = f:read('*l')
+  f:close()
+  if not portal_ip then
+    return 'Could not resolve portal'
+  else
+    return portal_ip
+  end
 end
 
 function support.troubleshoot()
@@ -88,8 +166,36 @@ function support.troubleshoot()
   uhttpd.send('======= DATE ======\r\n')
   uhttpd.send(support.date())
   uhttpd.send('\r\n')
+  uhttpd.send('======= PUBLIC IP ======\r\n')
+  uhttpd.send('Public ip: ' .. get_public_ip())
+  uhttpd.send('\r\n')
   uhttpd.send('======= HOSTNAME ======\r\n')
   uhttpd.send(sys.hostname())
+  uhttpd.send('\r\n')
+  uhttpd.send('======= VERSION ======\r\n')
+  uhttpd.send(get_version())
+  uhttpd.send('\r\n')
+  uhttpd.send('======= ACCESS PORTAL ======\r\n')
+  if not cst.PortalUrl then
+    uhttpd.send('Can\'t netcat to portal, no portal in conf file')
+  else
+    uhttpd.send('Portal ip: ' .. resolve_portal())
+    uhttpd.send('\r\n')
+    uhttpd.send('Netcat to '
+               .. cst.PortalUrl:match('^%w+://([^/]+)') 
+               .. ': ' 
+               .. tostring(support.has_access_to_portal()))
+  end
+  uhttpd.send('\r\n')
+  uhttpd.send('======= CONFIGURATION CITYSCOPE ======\r\n')
+  uhttpd.send('Portal URL from cityscope: '..curl_admin_citypassenger())
+  uhttpd.send('\r\n')
+  uhttpd.send('======= CONFIGURATION WORDPRESS ======\r\n')
+  uhttpd.send('Configuration from wordpress: ')
+  uhttpd.send('\r\n')
+  uhttpd.send(curl_get_config('/tmp/add_config_err'))
+  uhttpd.send('\r\n')
+  uhttpd.send(curl_get_config('/tmp/get_config_err'))
   uhttpd.send('\r\n')
   uhttpd.send('======= INTERFACES =======\r\n')
   uhttpd.send(ifconfig())
@@ -97,23 +203,17 @@ function support.troubleshoot()
   uhttpd.send('======= PORT 2 =======\r\n')
   uhttpd.send(swconfig_switch0_port2())
   uhttpd.send('\r\n')
-  uhttpd.send('======= PORTS =======\r\n')
-  uhttpd.send('INTERFACE eth1 (POE)\r\n')
-  uhttpd.send(port('eth1'))
-  uhttpd.send('INTERFACE eth0 \r\n')
-  uhttpd.send(port('eth0'))
-  uhttpd.send('\r\n') 
   uhttpd.send('======= ROUTE =======\r\n')
   uhttpd.send(route())
   uhttpd.send('\r\n')
   uhttpd.send('======= DHCP LEASES ======\r\n')
   uhttpd.send(get_dhcp_leases())
   uhttpd.send('\r\n')
+  uhttpd.send('======= LOGREAD =======\r\n')
+  uhttpd.send(logread())
+  uhttpd.send('\r\n')
   uhttpd.send('======= PROCESSES LIST =======\r\n')
   uhttpd.send(top())
-  uhttpd.send('\r\n')
-  uhttpd.send('======= DIG ======\r\n')
-  uhttpd.send(dig())
   uhttpd.send('\r\n')
   uhttpd.send('======= TRACEROUTE ======\r\n')
   uhttpd.send(traceroute())
