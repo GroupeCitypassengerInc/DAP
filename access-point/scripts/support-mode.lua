@@ -13,6 +13,13 @@ uci = require 'luci.model.uci'
 portal = require 'portal_proxy'
 lease  = require 'lease_file_reader'
 
+local cmd = 'pgrep -f "/usr/sbin/hostapd -B -P /tmp/hostapd.support.pid /etc/hostapd.support.conf"'
+local support_hostapd = os.execute(cmd)
+if support_hostapd == 0 then
+  nixio.syslog('info','Support mode already active')
+  return true
+end
+
 -- Killall hostapd
 x = fs.remove('/tmp/hostapd.0.pid')
 if not x then
@@ -22,6 +29,7 @@ y = fs.remove('/tmp/hostapd.1.pid')
 if not y then
   nixio.syslog('warning','No hostapd 1 pid file to remove')
 end
+
 local cmd = '/usr/bin/killall hostapd'
 local s = os.execute(cmd)
 if s ~= 0 then
