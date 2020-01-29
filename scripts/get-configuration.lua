@@ -261,6 +261,10 @@ end
 local f = io.open('/tmp/dns_portal','r')
 local ip_portal = f:read('*l')
 f:close()
+if not ip_portal then
+  nixio.syslog('err','could not resolve '..domain)
+  os.exit(1)
+end
 
 ------------------------
 --------- GET CONFIG WORDPRESS 
@@ -276,8 +280,8 @@ if exit ~= 0 then
   nixio.syslog('err','cURL exit code: '..exit)
   os.exit(exit)
 end
-if response ~= 200 then
-  nixio.syslog('err','cURL response: '..response)
+if response ~= '200' then
+  nixio.syslog('err','add access point cURL response: '..response)
   os.exit(response)
 end
 local f = io.open('/tmp/add_wordpress','r')
@@ -308,8 +312,8 @@ if exit ~= 0 then
   nixio.syslog('err','cURL exit code: '..exit)
   os.exit(exit)
 end
-if response ~= 200 then
-  nixio.syslog('err','cURL response: '..response)
+if response ~= '200' then
+  nixio.syslog('err','get config cURL response: '..response)
   os.exit(response)
 end
 local f = io.open('/tmp/config_wordpress','r')
@@ -378,6 +382,11 @@ if res then reload.uhttpd() end
 
 -- UPDATE COUNTRY CODE
 local country_code_new = wp_resp['country_code']
+local m = string.match(country_code_new, '%u%u')
+if m ~= country_code_new then
+  nixio.syslog('err','Invalid country code format')
+  os.exit(1)
+end
 if data.ap.country_code ~= country_code_new then
   local cmd = '/usr/bin/killall hostapd'
   local x = os.execute(cmd)
