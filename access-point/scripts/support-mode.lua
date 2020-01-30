@@ -13,7 +13,7 @@ uci = require 'luci.model.uci'
 portal = require 'portal_proxy'
 lease  = require 'lease_file_reader'
 
-local cmd = 'pgrep -f "/usr/sbin/hostapd -B -P /tmp/hostapd.support.pid /etc/hostapd.support.conf"'
+local cmd = '/usr/bin/pgrep -f "/usr/sbin/hostapd -B -P /tmp/hostapd.support.pid /etc/hostapd.support.conf"'
 local support_hostapd = os.execute(cmd)
 if support_hostapd == 0 then
   nixio.syslog('info','Support mode already active')
