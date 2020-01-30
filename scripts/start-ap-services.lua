@@ -3,7 +3,7 @@ local nixio  = require 'nixio'
 local reload = require 'reloader'
 local fs     = require 'nixio.fs'
 
-local check = '/usr/bin/test -e /tmp/hostapd.0.pid'
+local check = '/usr/bin/pgrep -f "hostapd -B -P /tmp/hostapd.0.pid /etc/hostapd.0.conf"'
 local s = os.execute(check)
 if s ~= 0 then
   reload.retry_hostapd('/etc/hostapd.0.conf')
@@ -15,7 +15,7 @@ nixio.nanosleep(1)
 local cmd = '/usr/bin/test -e /tmp/nointernet'
 local internet = os.execute(cmd)
 if internet ~= 0 then
-  local check = '/usr/bin/test -e /tmp/hostapd.support.pid'
+  local check = '/usr/bin/pgrep -f "hostapd -B -P /tmp/hostapd.support.pid /etc/hostapd.support.conf"'
   local s = os.execute(check)
   if s == 0 then
     local cmd = '/bin/cat /tmp/hostapd.support.pid'
@@ -34,7 +34,7 @@ end
 
 nixio.nanosleep(1)
 
-local check = '/usr/bin/test -e /tmp/hostapd.1.pid'
+local check = '/usr/bin/pgrep -f "hostapd -B -P /tmp/hostapd.1.pid /etc/hostapd.1.conf"'
 local s = os.execute(check)
 if s ~= 0 then
   reload.retry_hostapd('/etc/hostapd.1.conf')
@@ -56,16 +56,20 @@ if s ~= 0 then
   local x = os.execute(cmd)
 end
 
-local check = '/usr/bin/test -e /tmp/dnsmasq.pid'
+local check = '/usr/bin/pgrep -f "dnsmasq --conf-file=/etc/dnsmasq-dhcp.conf --guard-ip=10.168.168.1"'
 local s = os.execute(check)
 if s ~= 0 then
   reload.dnsmasq()
 end
 
-local check = '/usr/bin/test -e /tmp/dnsmasq-portal.pid'
+local check = '/usr/bin/pgrep -f "dnsmasq --conf-file=/etc/dnsmasq.portal"'
 local s = os.execute(check)
 if s ~= 0 then
   reload.dnsmasq_portal()
+end
+local check = '/usr/bin/pgrep -f "lua /scripts/logger.lua"'
+local s = os.execute(check)
+if s ~= 0 then
   reload.logger()
 end
 os.execute('/etc/init.d/uhttpd restart')
