@@ -10,7 +10,7 @@ local data = require 'LIP'
 support = {}
 
 function support.date()
-  return os.date("%a, %d %b %Y %H:%M:%S GMT")
+  return os.date("%a, %d %b %Y %H:%M:%S CET")
 end
 
 function top()
@@ -34,6 +34,13 @@ function ifconfig()
   return io.popen(cmd):read('*a')
 end
 
+function get_file_date(file_path)
+  cmd = '/bin/date -r %s'
+  cmd = string.format(cmd, file_path)
+  s = io.popen(cmd):read('*l')
+  return s
+end
+
 function get_dhcp_leases()
   cmd = '/bin/cat /tmp/dhcp.leases'
   return io.popen(cmd):read('*a')
@@ -41,7 +48,10 @@ end
 
 function traceroute()
   cmd = '/bin/traceroute -4 8.8.8.8'
-  return io.popen(cmd):read('*a')
+  p = io.popen(cmd)
+  res = p:read('*a')
+  p:close()
+  return res
 end
 
 function support.get_autossh_status()
@@ -86,14 +96,22 @@ function support.has_access_to_portal()
     return false
   end
   local host = cst.PortalUrl:match('^%w+://([^:/]+)')
-  local cmd = '/bin/echo | /usr/bin/nc -w2 %s 443'
-  check_connectivity = string.format(cmd,host)
+  local port = cst.PortalUrl:match('%d+$')
+  local cmd = '/bin/echo | /usr/bin/nc -w2 %s %d'
+  if not port then
+    check_connectivity = string.format(cmd,host,443)
+  else
+    check_connectivity = string.format(cmd,host,port)
+  end
   local res = os.execute(check_connectivity)
   return res == 0
 end
 
 function get_public_ip()
   local f = io.open('/tmp/public.ip','r')
+  if not f then
+    return 'No public ip'
+  end
   local public_ip = f:read('*l')
   f:close()
   if not public_ip then
@@ -102,7 +120,7 @@ function get_public_ip()
   return public_ip
 end
 
-function curl_get_config(curl_file)
+function read_file(curl_file)
   local f = io.open(curl_file,'r')
   local s = f:read('*a')
   f:close()
@@ -167,6 +185,8 @@ function support.troubleshoot()
   uhttpd.send(support.date())
   uhttpd.send('\r\n')
   uhttpd.send('======= PUBLIC IP ======\r\n')
+  uhttpd.send('Date public ip: ' .. get_file_date('/tmp/public.ip'))
+  uhttpd.send('\r\n')
   uhttpd.send('Public ip: ' .. get_public_ip())
   uhttpd.send('\r\n')
   uhttpd.send('======= HOSTNAME ======\r\n')
@@ -182,7 +202,7 @@ function support.troubleshoot()
     uhttpd.send('Portal ip: ' .. resolve_portal())
     uhttpd.send('\r\n')
     uhttpd.send('Netcat to '
-               .. cst.PortalUrl:match('^%w+://([^/]+)') 
+               .. cst.PortalUrl:match('^%w+://([^:/]+)') 
                .. ': ' 
                .. tostring(support.has_access_to_portal()))
   end
@@ -191,11 +211,19 @@ function support.troubleshoot()
   uhttpd.send('Portal URL from cityscope: '..curl_admin_citypassenger())
   uhttpd.send('\r\n')
   uhttpd.send('======= CONFIGURATION WORDPRESS ======\r\n')
-  uhttpd.send('Configuration from wordpress: ')
+  uhttpd.send('Add access point to wordpress stderr:')
   uhttpd.send('\r\n')
-  uhttpd.send(curl_get_config('/tmp/add_config_err'))
+  uhttpd.send(read_file('/tmp/add_config_err'))
   uhttpd.send('\r\n')
-  uhttpd.send(curl_get_config('/tmp/get_config_err'))
+  uhttpd.send('Get configuration from wordpress stderr:')
+  uhttpd.send('\r\n')
+  uhttpd.send(read_file('/tmp/get_config_err'))
+  uhttpd.send('\r\n')
+  uhttpd.send('Date of last correct configuration in /tmp/config_wordpress:\r\n')
+  uhttpd.send(get_file_date('/tmp/config_wordpress'))
+  uhttpd.send('\r\n')
+  uhttpd.send('Configuration from wordpress:\r\n')
+  uhttpd.send(read_file('/tmp/config_wordpress'))
   uhttpd.send('\r\n')
   uhttpd.send('======= INTERFACES =======\r\n')
   uhttpd.send(ifconfig())
@@ -217,6 +245,7 @@ function support.troubleshoot()
   uhttpd.send('\r\n')
   uhttpd.send('======= TRACEROUTE ======\r\n')
   uhttpd.send(traceroute())
+  uhttpd.send('\r\n')
 end
 
 return support
