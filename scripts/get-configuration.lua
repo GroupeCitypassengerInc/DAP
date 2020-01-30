@@ -44,8 +44,20 @@ end
  
 local path_addr = '/sys/devices/platform/soc/c080000.edma/net/eth1/address'
 local ini_file = '/etc/proxy.ini'
-local mac = io.popen('/bin/cat ' .. path_addr):read('*l')
-local api_key = io.popen('/bin/cat /root/.ssh/apikey'):read('*l')
+local mac_file = io.open(path_addr,'r')
+if not mac_file then
+  nixio.syslog('err','could not open '..path_addr)
+  os.exit(1)
+end
+local mac = mac_file:read('*l')
+mac_file:close()
+local api_file = io.open('/root/.ssh/apikey','r')
+if not api_file then
+  nixio.syslog('err','failed to open /root/.ssh/apikey')
+  os.exit(1)
+end
+local api_key = api_file:read('*l')
+api_file:close()
 local hostname = sys.hostname()
 local data =
 {
@@ -164,7 +176,7 @@ if current_rescue_host ~= new_rescue_host then
   parser.save(ini_file,d)  
   local cursor = uci.cursor()
   local new_value = {}
-  new_value[1] = '-i /root/.ssh/host_key -R 2222:localhost:22 support@'..new_rescue_host
+  new_value[1] = '-i /root/.ssh/host_key support@'..new_rescue_host
   local set_res = cursor:set('autossh','@autossh[0]','ssh',new_value)
   if not set_res then
     nixio.syslog('err','failed to set new conf uci')
@@ -230,7 +242,7 @@ end
 domain = url:match('^%w+://([^:/]+)')
 
 -- Checks if portal is in white list
-local cmd = '/bin/grep "' .. domain .. '" /etc/dnsmasq-white.conf > /dev/null'
+local cmd = '/bin/grep -w "' .. domain .. '" /etc/dnsmasq-white.conf > /dev/null'
 local x = os.execute(cmd)
 if x == 256 then
   -- Append portal url to white list
@@ -259,6 +271,10 @@ if dns ~= 0 then
   os.exit(1)
 end
 local f = io.open('/tmp/dns_portal','r')
+if not f then
+  nixio.syslog('err','could not open /tmp/dns_portal')
+  os.exit(1)
+end
 local ip_portal = f:read('*l')
 f:close()
 if not ip_portal then
@@ -285,6 +301,10 @@ if response ~= '200' then
   os.exit(response)
 end
 local f = io.open('/tmp/add_wordpress','r')
+if not f then
+  nixio.syslog('err','failed to open /tmp/add_wordpress')
+  os.exit(1)
+end
 local conf = f:read('*a')
 f:close()
 wp_reg = json.parse(conf)
@@ -317,6 +337,10 @@ if response ~= '200' then
   os.exit(response)
 end
 local f = io.open('/tmp/config_wordpress','r')
+if not f then
+  nixio.syslog('err','failed to open /tmp/config_wordpress')
+  os.exit(1)
+end
 local conf = f:read('*a')
 f:close()
 wp_resp = json.parse(conf)
