@@ -100,7 +100,7 @@ else
   local cmd = string.format(cmd,api_key,endpoint,mac)
   resp,exit = helper.command(cmd)
   if exit ~= 0 then
-    nixio.syslog('err',cmd..' failed with exit code: '..exit)
+    nixio.syslog('err', 'cURL to '..endpoint..'/'..mac..' failed with exit code: '..exit)
     os.exit(exit)
   end
   resp = json.parse(resp)
@@ -176,7 +176,7 @@ if current_rescue_host ~= new_rescue_host then
   parser.save(ini_file,d)  
   local cursor = uci.cursor()
   local new_value = {}
-  new_value[1] = '-i /root/.ssh/host_key support@'..new_rescue_host
+  new_value[1] = '-i /root/.ssh/host_key '..new_rescue_host
   local set_res = cursor:set('autossh','@autossh[0]','ssh',new_value)
   if not set_res then
     nixio.syslog('err','failed to set new conf uci')
@@ -203,7 +203,7 @@ for k,v in pairs(resp['files']) do
 end
 
 if hardware_now ~= hardware_new then
-  local cmd = '/usr/bin/killall hostapd'
+  local cmd = '/usr/bin/killall -q hostapd'
   local x = os.execute(cmd)
   if x ~= 0 then
     nixio.syslog('warning','No hostapd killed.')
@@ -240,7 +240,6 @@ if not url then
   return false
 end
 domain = url:match('^%w+://([^:/]+)')
-
 -- Checks if portal is in white list
 local cmd = '/bin/grep -w "' .. domain .. '" /etc/dnsmasq-white.conf > /dev/null'
 local x = os.execute(cmd)
@@ -293,7 +292,7 @@ local cmd = string.format(cmd,secret,url .. '/index.php',ip_portal,domain)
 
 response,exit = helper.command(cmd)
 if exit ~= 0 then
-  nixio.syslog('err','cURL exit code: '..exit)
+  nixio.syslog('err','cURL add AP exit code: '..exit)
   os.exit(exit)
 end
 if response ~= '200' then
@@ -353,14 +352,9 @@ end
 data = parser.load(ini_file)
 
 --- UPDATE SSID
+local changed = 0
 local ssid_new = wp_resp['ssid']
 if data.ap.ssid ~= ssid_new then
-  local cmd = '/usr/bin/killall hostapd'
-  local x = os.execute(cmd)
-  if x ~= 0 then
-    nixio.syslog('warning','No hostapd killed.')
-  end
-  nixio.nanosleep(1)
   change_ssid = "/bin/sed -i 's#^ssid=.*#ssid=%s#g' %s"
   for hostapd_file in pairs(resp['files']) do
     local s = string.format(change_ssid,ssid_new,hostapd_file)
@@ -368,15 +362,53 @@ if data.ap.ssid ~= ssid_new then
     if t ~= 0 then
       nixio.syslog('err','Failed to change ssid in ' .. hostapd_file)
     end
-    reload.retry_hostapd(hostapd_file)
     nixio.syslog('info','ssid in conf file ' .. hostapd_file .. ' has been updated.')
   end
   data.ap.ssid = ssid_new
   parser.save(ini_file,data)
-  reload.bridge()                                                    
-  reload.dnsmasq()
+  changed = changed + 1
 else
   nixio.syslog('info','ssid is up to date')
+end
+
+--- UPDATE COUNTRY CODE
+local country_code_new = wp_resp['country_code']
+local m = string.match(country_code_new, '%u%u')
+if m ~= country_code_new then
+  nixio.syslog('err','Invalid country code format')
+  os.exit(1)
+end
+if data.ap.country_code ~= country_code_new then
+  change_country_code = "/bin/sed -i 's#^country_code=.*#country_code=%s#g' %s"
+  for hostapd_file in pairs(resp['files']) do
+    local s = string.format(change_country_code,country_code_new,hostapd_file)
+    local t = os.execute(s)
+    if t ~= 0 then
+      nixio.syslog('err','Failed to change country code in ' .. hostapd_file)
+    end
+    nixio.syslog('info','country code in conf file ' .. hostapd_file .. ' has been updated')
+  end
+  data.ap.country_code = country_code_new
+  parser.save(ini_file,data)
+  changed = changed + 1
+else
+  nixio.syslog('info','country code is up to date')
+end
+
+-- RELOAD IF HOSTAPD CHANGED
+if changed > 0 then
+  local cmd = '/usr/bin/killall -q hostapd'
+  local x = os.execute(cmd)
+  if x ~= 0 then
+    nixio.syslog('warning','No hostapd killed.')
+  end
+  nixio.nanosleep(1)
+  nixio.syslog('info','hostapd configuration changed, reloading hostapd')
+  for hostapd_file in pairs(resp['files']) do
+    reload.retry_hostapd(hostapd_file)
+  end
+  reload.bridge()
+  reload.dnsmasq()
 end
 
 --- Update timeout
@@ -403,37 +435,3 @@ old = data.portal.error_page
 new = wp_resp['error_page']
 res = ini.update_config(old,new,data,'portal','error_page')
 if res then reload.uhttpd() end
-
--- UPDATE COUNTRY CODE
-local country_code_new = wp_resp['country_code']
-local m = string.match(country_code_new, '%u%u')
-if m ~= country_code_new then
-  nixio.syslog('err','Invalid country code format')
-  os.exit(1)
-end
-if data.ap.country_code ~= country_code_new then
-  local cmd = '/usr/bin/killall hostapd'
-  local x = os.execute(cmd)
-  if x ~= 0 then
-    nixio.syslog('warning','No hostapd killed.')
-  end
-  nixio.nanosleep(1)
-  change_country_code = "/bin/sed -i 's#^country_code=.*#country_code=%s#g' %s"
-  for hostapd_file in pairs(resp['files']) do
-    local s = string.format(change_country_code,country_code_new,hostapd_file)
-    local t = os.execute(s)
-    if t ~= 0 then
-      nixio.syslog('err','Failed to change country code in ' .. hostapd_file)
-    end
-    reload.retry_hostapd(hostapd_file)
-    nixio.syslog('info','country code in conf file ' .. hostapd_file .. ' has been updated')
-  end
-  data.ap.country_code = country_code_new
-  parser.save(ini_file,data)
-  reload.bridge()
-  reload.dnsmasq()
-else
-  nixio.syslog('info','country code is up to date')
-end
-
-os.exit(0)
