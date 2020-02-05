@@ -20,12 +20,6 @@ if has_portal then
   if file_exists == 0 then
     os.exit()
   end
-  create_file = string.format(create_file,file_internet)
-  local x = os.execute(create_file)
-  if x ~= 0 then
-    nixio.syslog('err','/scripts/interstate.lua: Failed to execute ' .. 
-    create_file .. '. Exit code: ' .. x)
-  end
   fs.remove(file_nointernet)
   fs.remove('/tmp/8888.lock')
   local cmd = '/usr/sbin/iptables -D INPUT -p tcp -m tcp --dport 8888 -m conntrack --ctstate NEW -j ACCEPT'
@@ -33,14 +27,20 @@ if has_portal then
   os.execute('/etc/init.d/autossh stop')
   dofile('/scripts/get-configuration.lua')
   dofile('/scripts/start-ap-services.lua')
+  create_file = string.format(create_file,file_internet)
+  local x = os.execute(create_file)
+  if x ~= 0 then
+    nixio.syslog('err','/scripts/interstate.lua: Failed to execute ' .. 
+    create_file .. '. Exit code: ' .. x)
+  end
 else
+  dofile('/scripts/support-mode.lua')
+  fs.remove(file_internet)
   create_file = string.format(create_file,file_nointernet)
   local x = os.execute(create_file)
   if x ~= 0 then
     nixio.syslog('err','/scripts/interstate.lua: Failed to execute ' .. 
     create_file .. '. Exit code: ' .. x)
   end
-  fs.remove(file_internet)
-  dofile('/scripts/support-mode.lua')
 end
 os.exit()
