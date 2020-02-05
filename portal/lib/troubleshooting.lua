@@ -38,6 +38,9 @@ function get_file_date(file_path)
   cmd = '/bin/date -r %s'
   cmd = string.format(cmd, file_path)
   s = io.popen(cmd):read('*l')
+  if not s then
+    return 'Could not read file '..file_path
+  end
   return s
 end
 
@@ -122,6 +125,9 @@ end
 
 function read_file(curl_file)
   local f = io.open(curl_file,'r')
+  if not f then
+    return 'Could not read file '..curl_file
+  end
   local s = f:read('*a')
   f:close()
   return s
