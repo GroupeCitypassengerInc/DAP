@@ -20,17 +20,7 @@ if support_hostapd == 0 then
   return true
 end
 
--- Killall hostapd
-x = fs.remove('/tmp/hostapd.0.pid')
-if not x then
-  nixio.syslog('warning','No hostapd 0 pid file to remove')
-end
-y = fs.remove('/tmp/hostapd.1.pid')
-if not y then
-  nixio.syslog('warning','No hostapd 1 pid file to remove')
-end
-
-local cmd = '/usr/bin/killall hostapd'
+local cmd = '/usr/bin/killall -q hostapd'
 local s = os.execute(cmd)
 if s ~= 0 then
   nixio.syslog('warning','No hostapd process killed.')
