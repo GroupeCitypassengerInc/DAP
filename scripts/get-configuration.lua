@@ -262,24 +262,14 @@ end
 ------------------------
 --------- RESOLVE PORTAL
 ------------------------
-local cmd = '/scripts/test_dns %s'
-local cmd = string.format(cmd,domain)
-local dns = os.execute(cmd)
-if dns ~= 0 then
+local dns_result = nixio.getaddrinfo(domain,'inet')
+if not dns_result then
   nixio.syslog('err','Failed to resolve portal: '..domain)
   os.exit(1)
 end
-local f = io.open('/tmp/dns_portal','r')
-if not f then
-  nixio.syslog('err','could not open /tmp/dns_portal')
-  os.exit(1)
-end
-local ip_portal = f:read('*l')
-f:close()
-if not ip_portal then
-  nixio.syslog('err','could not resolve '..domain)
-  os.exit(1)
-end
+
+local ip_portal = dns_result[1].address
+print(ip_portal)
 
 ------------------------
 --------- GET CONFIG WORDPRESS 
@@ -421,17 +411,20 @@ old = data.ap.timeout
 new = wp_resp['timeout']
 ini.update_config(old,new,data,'ap','timeout')
 
+local changed = 0
 old = data.portal.landing_page
 new = wp_resp['landing_page']
 res = ini.update_config(old,new,data,'portal','landing_page')
-if res then reload.uhttpd() end
+if res then changed = changed + 1 end
 
 old = data.portal.portal_page
 new = wp_resp['portal_page']
 res = ini.update_config(old,new,data,'portal','portal_page')
-if res then reload.uhttpd() end
+if res then changed = changed + 1 end
 
 old = data.portal.error_page
 new = wp_resp['error_page']
 res = ini.update_config(old,new,data,'portal','error_page')
-if res then reload.uhttpd() end
+if res then changed = changed + 1 end
+
+if changed > 0 then reload.uhttpd() end
