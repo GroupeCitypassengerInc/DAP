@@ -269,7 +269,6 @@ if not dns_result then
 end
 
 local ip_portal = dns_result[1].address
-print(ip_portal)
 
 ------------------------
 --------- GET CONFIG WORDPRESS 
