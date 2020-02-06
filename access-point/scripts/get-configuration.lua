@@ -27,7 +27,7 @@ local uci    = require 'luci.model.uci'
 --]]
 local cmd = '/usr/bin/curl -s --fail -m3 -o /tmp/public.ip "https://eth0.me"'
 local s = os.execute(cmd)
-if not s == 0 then
+if s ~= 0 then
   nixio.syslog('err','Failed to get public ip')
 end
 
@@ -86,10 +86,16 @@ local data =
 
 resp = nil
 
-endpoint = io.open("/etc/cityscope.conf"):read("*l")
+file = io.open('/etc/cityscope.conf', 'r')
+if not file then
+  nixio.syslog('err','Could not open /etc/cityscope.conf')
+  os.exit(1)
+end
+endpoint = file:read('*l')
+file:close()
 if not endpoint then
-  nixio.syslog("err","No endpoint to cityscope")
-  return
+  nixio.syslog('err','No endpoint to cityscope')
+  os.exit(1)
 end
 
 if not api_key then
@@ -105,7 +111,6 @@ else
   end
   resp = json.parse(resp)
 end
-
 url = nil
 secret = nil
 
