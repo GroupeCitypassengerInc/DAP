@@ -6,6 +6,7 @@ local sys = require 'luci.sys'
 local util = require 'luci.util'
 local nixio = require 'nixio'
 local data = require 'LIP'
+local uci = require 'luci.model.uci'
 
 support = {}
 
@@ -44,6 +45,13 @@ function get_file_date(file_path)
   return s
 end
 
+function support.has_network()
+  -- fix me
+  local cmd = '/bin/echo | /usr/bin/nc -w2 www.google.com 443'
+  local res = os.execute(cmd)
+  return res == 0
+end
+
 function get_dhcp_leases()
   cmd = '/bin/cat /tmp/dhcp.leases'
   return io.popen(cmd):read('*a')
@@ -57,8 +65,19 @@ function traceroute()
   return res
 end
 
+function get_autossh_options()
+  local cursor = uci.cursor()
+  local opts = cursor:get('autossh','@autossh[0]','ssh')
+  local opt = opts[1]
+  return opt
+end
+
 function support.get_autossh_status()
-  local pgrep = '/usr/bin/pgrep autossh > /dev/null'
+  local pgrep = '/usr/bin/pgrep -f "%s" > /dev/null'
+  local opt = get_autossh_options()
+  local ssh_base = '/usr/bin/ssh -L 20000:127.0.0.1:20000 -R 20000:127.0.0.1:20001 '
+  local ssh_full = ssh_base .. opt
+  pgrep = string.format(pgrep,ssh_full)
   local x = os.execute(pgrep)
   return x == 0
 end
@@ -81,7 +100,17 @@ end
 
 function support.has_lease()
   local cmd = '/bin/ubus call network.interface.wan status'
-  local rc = io.popen(cmd):read('*a')
+  for i=1,3 do
+    rc = io.popen(cmd):read('*a')
+    if rc then
+      break
+    end
+    nixio.nanosleep(3)
+  end
+  if not rc then
+    nixio.syslog('err','Failed to call ubus')
+    return
+  end
   local ubus_res = json.parse(rc)
   local lease_date = ubus_res.data.date
   if not lease_date then
@@ -174,14 +203,16 @@ function get_version()
 end
 
 function resolve_portal()
-  local f = io.open('/tmp/dns_portal','r')
-  portal_ip = f:read('*l')
-  f:close()
-  if not portal_ip then
-    return 'Could not resolve portal'
-  else
-    return portal_ip
+  if not cst.PortalUrl then
+    return 'No portal in conf'
   end
+  local host = cst.PortalUrl:match('^%w+://([^:/]+)')
+  local dns_result = nixio.getaddrinfo(host,'inet')
+  if not dns_result then
+    return 'Could not resolve portal'
+  end
+  local portal_ip = dns_result[1].address
+  return portal_ip
 end
 
 function support.troubleshoot()
@@ -240,6 +271,11 @@ function support.troubleshoot()
   uhttpd.send('======= ROUTE =======\r\n')
   uhttpd.send(route())
   uhttpd.send('\r\n')
+  if support.has_network() then
+    uhttpd.send('======= AUTOSSH =======\r\n')
+    uhttpd.send('Options :'.. get_autossh_options())
+    uhttpd.send('\r\n')
+  end
   uhttpd.send('======= DHCP LEASES ======\r\n')
   uhttpd.send(get_dhcp_leases())
   uhttpd.send('\r\n')
