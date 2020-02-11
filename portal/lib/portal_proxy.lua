@@ -276,7 +276,7 @@ function proxy.has_user_been_connected(mac)
     connection = json.parse(connection)
     return connection
   else
-    nixio.syslog("err",cmd .. " failed with exit code: " .. exit)
+    nixio.syslog("err","curl reauth failed with exit code: " .. exit)
     return false
   end
 end

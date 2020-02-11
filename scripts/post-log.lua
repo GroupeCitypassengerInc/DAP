@@ -47,6 +47,6 @@ if x == 0 then
   nixio.syslog('info','DNS logs posted to ' .. cst.PortalUrl .. '.')
   remove(fpath,1,c)
 else
-  nixio.syslog('warning','cURL POST failed.')
+  nixio.syslog('warning','cURL POST logs failed.')
 end
 os.exit()

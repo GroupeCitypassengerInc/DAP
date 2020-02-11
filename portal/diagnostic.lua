@@ -10,7 +10,25 @@ uhttpd.send("<body>\r\n")
 uhttpd.send("<h1>Solo support</h1>\r\n")
 uhttpd.send("<p>Date: " .. troubleshooting.date() .. "</p>\r\n")
 uhttpd.send("<p>Hostname: " .. sys.hostname() .. "</p>\r\n")
+if support.has_network() then
+  local autossh_state = nil
+  if support.get_autossh_status() then
+    autossh_state = "Up"
+  else
+    autossh_state = "Down"
+  end
+  uhttpd.send("<p>Status autossh: " .. autossh_state .."</p>\r\n")
+  uhttpd.send("<p><a href='http://cloudgate.citypassenger.com/autossh'>Enable/Disable remote ssh</a></p>\r\n")
+else
+  uhttpd.send("<p>Autossh unavailable</p>")
+end
+uhttpd.send("<p>\r\n")
+uhttpd.send("Go to <a href='http://10.168.168.1:8888'>LUCI</a>\r\n")
+uhttpd.send("</p>\r\n")
 uhttpd.send("<h2>Diagnostic</h2>\r\n")
+uhttpd.send("<p>\r\n")
+uhttpd.send("<a href='http://cloudgate.citypassenger.com/support'>More information</a>\r\n")
+uhttpd.send("</p>\r\n")
 local plugged = troubleshooting.is_port2_plugged()
 if not plugged then
   uhttpd.send("<div>\r\n")
@@ -32,19 +50,21 @@ else
       uhttpd.send("If your internet connection is OK. Please contact our support our support service with the content of /support, the link is down below (More information) at support@citypassenger.com\r\n")
       uhttpd.send("</div>\r\n")
     else
-      uhttpd.send("<div>\r\n")
-      uhttpd.send("Everything seems fine. Wait a minute for your services to come back online.\r\n")
-      uhttpd.send("If you still have access to this page after several minutes. Please contact our support service with the content of /support, the link is down below (More information) at support@citypassenger.com\r\n")
-      uhttpd.send("</div>\r\n")
+      if not support.has_network() then
+        uhttpd.send("<div>\r\n")
+        uhttpd.send("Your access point does not have access to internet.\r\n")
+        uhttpd.send("Please check your internet connection.\r\n")
+        uhttpd.send("If your internet connection is OK. Please contact our support service with the content of /support, the link is down below (More information) at support@citypassenger.com\r\n")
+        uhttpd.send("</div>\r\n")
+      else
+        uhttpd.send("<div>\r\n")
+        uhttpd.send("Everything seems fine. Wait a minute for your services to come back online.\r\n")
+        uhttpd.send("If you still have access to this page after several minutes. Please contact our support service with the content of /support, the link is down below (More information) at support@citypassenger.com\r\n")
+        uhttpd.send("</div>\r\n")
+      end
     end
   end
 end
 
-uhttpd.send("<p>\r\n")
-uhttpd.send("<a href='http://cloudgate.citypassenger.com/support'>More information</a>\r\n")
-uhttpd.send("</p>\r\n")
-uhttpd.send("<p>\r\n")
-uhttpd.send("Go to <a href='http://10.168.168.1:8888'>LUCI</a>\r\n")
-uhttpd.send("</p>\r\n")
 uhttpd.send("</body>\r\n")
 uhttpd.send("</html>\r\n")
