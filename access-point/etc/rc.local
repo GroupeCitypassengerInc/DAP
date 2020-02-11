@@ -1,30 +1,59 @@
-## ----- USER:HEADER -----
-## ----- END USER:HEADER -----
+# cat /etc/rc.local
+# Put your custom commands here that should be executed once
+# the system init finished. By default this file does nothing.
+#
 
+echo Citypassenger HD53 > /etc/banner
+cat /proc/sys/kernel/hostname >> /etc/banner
+echo V1.1 >> /etc/banner
+echo ==================================== >> /etc/banner
+lua /scripts/create-hostapd-conf-support.lua
+
+# create a test config (passwordless SSID) with iperf
+# verify base serv are here
+service dnsmasq disable
+service dnsmasq stop
+service dropbear enable
+service network enable
+service odhcpd enable
+service network start
+service odhcpd  start
 /etc/init.d/sysntpd start
-sleep 5
-../etc/rules.sh
 /etc/init.d/dnsmasq disable
 /etc/init.d/dnsmasq stop
+/etc/rules.sh
 mkdir /var/localdb
 mkdir /var/tmpdb
-touch /tmp/dns.data
-mkfifo /tmp/dns.log
-sleep 5
-ip_wan=$(ifconfig eth0.1 | grep 'inet addr' | cut -d: -f2 | awk '{print $1}')
+mkfifo /var/dns.log
+touch /var/dns.data
+
+ip_wan=$(ifconfig br-wan | grep 'inet addr' | cut -d: -f2 | awk '{print $1}')
 if [ -z $ip_wan ];then
   ip_wan="172.16.3.2"
 fi
 uci set uhttpd.main.listen_http=$ip_wan:80
 uci commit uhttpd
 sleep 5
-/etc/init.d/cron start
-sleep 10
 /etc/init.d/uhttpd restart
+sleep 5
+/etc/init.d/cron start
 iw dev wlan0 set txpower fixed 1900
 iw dev wlan1 set txpower fixed 1900
-../scripts/file-watcher.sh
-## ----- USER:FOOTER -----
-## ----- END USER:FOOTER -----
 
-exit 0
+/scripts/file-watcher.sh &
+
+# informative basic switch init
+swconfig dev switch0 set enable_vlan 0
+swconfig dev switch0 set apply
+swconfig dev switch0 set enable_vlan 1
+swconfig dev switch0 set apply
+swconfig dev switch0 vlan 3 set 'vid' '10'
+swconfig dev switch0 vlan 3 set 'ports' '0t 5t'
+swconfig dev switch0 vlan 4 set 'vid' '1'
+swconfig dev switch0 vlan 4 set 'ports' '0t 4'
+swconfig dev switch0 vlan 5 set 'vid' '2'
+swconfig dev switch0 vlan 5 set 'ports' '0t 5'
+swconfig dev switch0 set apply
+swconfig dev switch0 set enable_vlan 1
+swconfig dev switch0 set apply
+
