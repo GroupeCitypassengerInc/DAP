@@ -17,6 +17,5 @@ mac=$(/bin/cat /sys/devices/platform/soc/c080000.edma/net/eth1/address)
 -o /tmp/add_wordpress \
 -w %{http_code} \
 --resolve "$host:443:$ip" \
---resolve "$host:80:$ip" \
 --retry 3 --retry-delay 5 \
 $url 2>/tmp/add_config_err

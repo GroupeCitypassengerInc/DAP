@@ -8,7 +8,8 @@ local cmd = '/usr/bin/curl --retry 3 --retry-delay 5 --fail -m 10 --connect-time
           ..'--data-urlencode "digilan-token-secret=%s" '
           ..'"%s"'
 local cmd = string.format(cmd, cst.ap_secret, cst.PortalUrl..'/index.php')
+
 local res,exit = helper.command(cmd)
 if exit ~= 0 then
-  nixio.syslog('err',cmd .. ' failed with exit code : ' .. exit)
+  nixio.syslog('err', 'curl archive connections failed with exit code : ' .. exit)
 end

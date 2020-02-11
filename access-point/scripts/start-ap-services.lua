@@ -18,8 +18,9 @@ if internet ~= 0 then
   local check = '/usr/bin/pgrep -f "hostapd -B -P /tmp/hostapd.support.pid /etc/hostapd.support.conf"'
   local s = os.execute(check)
   if s == 0 then
-    local cmd = '/bin/cat /tmp/hostapd.support.pid'
-    local pid = io.popen(cmd):read('*l')
+    local pid_file = io.open('/tmp/hostapd.support.pid','r')
+    local pid = pid_file:read('*l')
+    pid_file:close()
     pid = tonumber(pid)
     local killed = nixio.kill(pid,15)
     if not killed then
@@ -73,4 +74,3 @@ if s ~= 0 then
   reload.logger()
 end
 os.execute('/etc/init.d/uhttpd restart')
-os.exit()

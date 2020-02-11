@@ -29,9 +29,6 @@ function handle_request(env)
   end
 
   local re = "ws/wifi/public_wifi/auth.cgi%?session_id%=[0-9a-f]+%&secret=[0-9a-f]+%&type%=digilantoken"
-  if url_path then
-    nixio.syslog("info", "foo url_path " .. url_path)
-  end
   if url_path == string.match(url_path,re) then
     local query_string = env.QUERY_STRING
     local params = protocol.urldecode_params(query_string)
