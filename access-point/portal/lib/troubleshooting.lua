@@ -75,7 +75,7 @@ end
 function support.get_autossh_status()
   local pgrep = '/usr/bin/pgrep -f "%s" > /dev/null'
   local opt = get_autossh_options()
-  local ssh_base = '/usr/bin/ssh -L 20000:127.0.0.1:20000 -R 20000:127.0.0.1:20001 '
+  local ssh_base = '/usr/bin/ssh '
   local ssh_full = ssh_base .. opt
   pgrep = string.format(pgrep,ssh_full)
   local x = os.execute(pgrep)
@@ -83,7 +83,7 @@ function support.get_autossh_status()
 end
 
 function support.start_autossh()
-  os.execute('/etc/init.d/autossh start')
+  os.execute('/etc/init.d/autossh restart')
   nixio.syslog('info','Autossh service has been started')
 end
 
@@ -217,7 +217,7 @@ end
 
 function support.troubleshoot()
   uhttpd.send('Status: 200 OK\r\n')
-  uhttpd.send('Content-Type: text/text\r\n\r\n')
+  uhttpd.send('Content-Type: text/plain\r\n\r\n')
   uhttpd.send('======= DATE ======\r\n')
   uhttpd.send(support.date())
   uhttpd.send('\r\n')
