@@ -94,8 +94,13 @@ end
 
 function support.is_port2_plugged()
   local link_info = swconfig_switch0_port2()
-  local link_up = "link: port:5 link:up speed:1000baseT full-duplex txflow rxflow auto"
-  return link_info == link_up
+  local re = "link%: port%:%d+ link%:up speed%:%d+baseT full%-duplex txflow rxflow auto"
+  local res = link_info:match(re)
+  if not res then
+    return false
+  else
+    return true
+  end
 end
 
 function support.has_lease()
