@@ -1,8 +1,8 @@
 #!/bin/sh
 
-sysctl -w net.ipv4.ip_forward=1 
+sysctl -w net.ipv4.ip_forward=1
 
-ip_wan=$(ifconfig eth0.1 | grep 'inet addr' | cut -d: -f2 | awk '{print $1}')
+ip_wan=$(ifconfig br-wan | grep 'inet addr' | cut -d: -f2 | awk '{print $1}')
 
 ### CLEAN ALL RULES
 
@@ -23,22 +23,23 @@ iptables -t nat -A PREROUTING -i bridge1 -p tcp --dport 80 -s 10.168.168.0/24 -j
 
 ### INPUT
 
-iptables -A INPUT -m state --state ESTABLISHED -j ACCEPT
-iptables -A INPUT -m state --state RELATED -j ACCEPT
-iptables -A INPUT -p tcp -s 10.168.168.0/24 -d $ip_wan -m state --state NEW -j REJECT
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED -j ACCEPT
+iptables -A INPUT -m conntrack --ctstate RELATED -j ACCEPT
+iptables -A INPUT -p tcp -s 10.168.168.0/24 -d $ip_wan -m conntrack --ctstate NEW -j REJECT
 iptables -A INPUT -i lo -j ACCEPT
-iptables -A INPUT -p icmp --icmp-type 8 -m state --state NEW -j ACCEPT
-iptables -A INPUT -p tcp --dport 22 -m state --state NEW -j ACCEPT
-iptables -A INPUT -p tcp -s 10.168.168.0/24 --dport 53 -m state --state NEW -j ACCEPT
-iptables -A INPUT -p udp -s 10.168.168.0/24 --dport 53 -m state --state NEW -j ACCEPT
-iptables -A INPUT -p udp -s 10.168.168.0/24 --dport 5353 -m state --state NEW -j ACCEPT
-iptables -A INPUT -p tcp -s 10.168.168.0/24 --dport 5353 -m state --state NEW -j ACCEPT
-iptables -A INPUT -p tcp --dport 80 -m state --state NEW -j ACCEPT
-iptables -A INPUT -p tcp --dport 443 -m state --state NEW -j ACCEPT
-iptables -A INPUT -p udp --sport 67:68 --dport 67:68 -m state --state NEW -j ACCEPT
+iptables -A INPUT -p icmp --icmp-type 8 -m conntrack --ctstate NEW -j ACCEPT
+iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW -j ACCEPT
+iptables -A INPUT -p tcp -s 10.168.168.0/24 --dport 53 -m conntrack --ctstate NEW -j ACCEPT
+iptables -A INPUT -p udp -s 10.168.168.0/24 --dport 53 -m conntrack --ctstate NEW -j ACCEPT
+iptables -A INPUT -p udp -s 10.168.168.0/24 --dport 5353 -m conntrack --ctstate NEW -j ACCEPT
+iptables -A INPUT -p tcp -s 10.168.168.0/24 --dport 5353 -m conntrack --ctstate NEW -j ACCEPT
+iptables -A INPUT -p tcp --dport 80 -m conntrack --ctstate NEW -j ACCEPT
+iptables -A INPUT -p tcp --dport 8081 -m conntrack --ctstate NEW -j ACCEPT
+iptables -A INPUT -p tcp --dport 443 -m conntrack --ctstate NEW -j ACCEPT
+iptables -A INPUT -p udp --sport 67:68 --dport 67:68 -m conntrack --ctstate NEW -j ACCEPT
 
 ### FORWARD
 
-iptables -t nat -A POSTROUTING -o eth0.1 -j MASQUERADE
-iptables -A FORWARD -i eth0.1 -j ACCEPT
-iptables -A FORWARD -o eth0.1 -j ACCEPT
+iptables -t nat -A POSTROUTING -o br-wan -j MASQUERADE
+iptables -A FORWARD -i br-wan -j ACCEPT
+iptables -A FORWARD -o br-wan -j ACCEPT

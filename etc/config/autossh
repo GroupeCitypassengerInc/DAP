@@ -1,0 +1,8 @@
+
+config autossh
+        option gatetime '0'
+        option monitorport '0'
+        option poll '600'
+        option enabled '1'
+        list ssh '-i /root/.ssh/host_key -y -T -N ' 
+
