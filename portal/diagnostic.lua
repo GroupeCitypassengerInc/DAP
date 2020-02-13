@@ -12,13 +12,13 @@ uhttpd.send("<p>Date: " .. troubleshooting.date() .. "</p>\r\n")
 uhttpd.send("<p>Hostname: " .. sys.hostname() .. "</p>\r\n")
 if troubleshooting.has_network() then
   local autossh_state = nil
-  if support.get_autossh_status() then
+  if troubleshooting.get_autossh_status() then
     autossh_state = "Up"
   else
     autossh_state = "Down"
   end
   uhttpd.send("<p>Status autossh: " .. autossh_state .."</p>\r\n")
-  uhttpd.send("<p><a href='http://cloudgate.citypassenger.com/autossh'>Enable/Disable remote ssh</a></p>\r\n")
+  uhttpd.send("<p><a href='/autossh'>Enable/Disable remote ssh</a></p>\r\n")
 else
   uhttpd.send("<p>Autossh unavailable</p>")
 end
@@ -27,7 +27,7 @@ uhttpd.send("Go to <a href='http://10.168.168.1:8888'>LUCI</a>\r\n")
 uhttpd.send("</p>\r\n")
 uhttpd.send("<h2>Diagnostic</h2>\r\n")
 uhttpd.send("<p>\r\n")
-uhttpd.send("<a href='http://cloudgate.citypassenger.com/support'>More information</a>\r\n")
+uhttpd.send("<a href='/support'>More information</a>\r\n")
 uhttpd.send("</p>\r\n")
 local plugged = troubleshooting.is_port2_plugged()
 if not plugged then
