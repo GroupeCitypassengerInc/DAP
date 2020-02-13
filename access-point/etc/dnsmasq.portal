@@ -4,5 +4,7 @@ interface=bridge1
 listen-address=127.0.0.1
 bind-interfaces
 port=5353
-resolv-file=/tmp/resolv.conf.auto
-
+resolv-file=/etc/opendns.conf
+log-queries
+log-facility=/tmp/dns.log
+pid-file=/tmp/dnsmasq-portal.pid

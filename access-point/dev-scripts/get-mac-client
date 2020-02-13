@@ -1,8 +1,0 @@
-#!/bin/sh
-# PLEASE USE AWK 
-set -x
-set -e
-
-FOO=$(grep ${1?none} /tmp/dhcp.leases)
-echo $FOO | cut -d" " -f 2
-
