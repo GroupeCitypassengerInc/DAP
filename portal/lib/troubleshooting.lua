@@ -187,10 +187,7 @@ function curl_admin_citypassenger()
   local f = io.open('/etc/cityscope.conf')
   local url = f:read('*l')
   f:close()
-  local conf = data.load('/etc/proxy.ini')
-  local g = io.open(conf['ap']['mac_addr'])
-  local mac = g:read('*l')
-  g:close()
+  local mac = cst.ap_mac
   local api = url .. '/' .. mac
   local f = io.open('/root/.ssh/apikey')
   local key = f:read('*l')
