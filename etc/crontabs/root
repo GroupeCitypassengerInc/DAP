@@ -1,4 +1,4 @@
 * * * * * lua /scripts/timeout.lua
 * * * * * ../scripts/interstate.sh
 */5 * * * * lua /scripts/post-log.lua
-0 * * * * lua /scripts/get-configuration.lua
+*/5 * * * * lua /scripts/get-configuration.lua
