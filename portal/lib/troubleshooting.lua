@@ -103,6 +103,22 @@ function support.is_port2_plugged()
   end
 end
 
+function print_lease_json()
+  local cmd = '/bin/ubus call network.interface.wan status'
+  for i=1,3 do
+    rc = io.popen(cmd):read('*a')
+    if rc then
+      break
+    end
+    nixio.nanosleep(3)
+  end
+  if not rc then
+    nixio.syslog('err','Failed to call ubus')
+    return
+  end
+  return rc
+end
+
 function support.has_lease()
   local cmd = '/bin/ubus call network.interface.wan status'
   for i=1,3 do
@@ -283,6 +299,9 @@ function support.troubleshoot()
   end
   uhttpd.send('======= DHCP LEASES ======\r\n')
   uhttpd.send(get_dhcp_leases())
+  uhttpd.send('\r\n')
+  uhttpd.send('======= ACCESS POINT DHCP LEASE ======\r\n')
+  uhttpd.send(print_lease_json())
   uhttpd.send('\r\n')
   uhttpd.send('======= LOGREAD =======\r\n')
   uhttpd.send(logread())
