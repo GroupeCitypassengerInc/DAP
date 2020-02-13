@@ -45,11 +45,52 @@ function get_file_date(file_path)
   return s
 end
 
+function support.curl_google()
+  local cmd = '/usr/bin/curl '
+            ..'--retry 1 --retry-delay 2 '
+            ..'-w %{http_code} '
+            ..'-m3 '
+            ..'--fail '
+            ..'-o /tmp/curl_google '
+            ..'"https://www.google.com" 2>/tmp/curl_google_stderr'
+  http_code, exit = helper.command(cmd)
+  local res = {http_code=http_code, exit=exit}
+  return res
+end
+
+function support.curl_cityscope()
+  local f = io.open('/etc/cityscope.conf','r')
+  local cityscope = f:read('*l')
+  f:close()
+  local cityscope = cityscope .. '/version'
+  local cmd = '/usr/bin/curl '
+            ..'--retry 1 --retry-delay 2 '
+            ..'-w %%{http_code} '
+            ..'-m3 '
+            ..'--fail '
+            ..'-o /tmp/curl_cityscope '
+            ..'"%s" 2>/tmp/curl_cityscope_stderr'
+  local cmd = string.format(cmd,cityscope)
+  http_code, exit = helper.command(cmd)
+  local res = {http_code=http_code, exit=exit}
+  return res
+end
+
 function support.has_network()
   -- fix me
   local cmd = '/bin/echo | /usr/bin/nc -w2 www.google.com 443'
   local res = os.execute(cmd)
   return res == 0
+end
+
+function support.netcat_cityscope()
+  local f = io.open('/etc/cityscope.conf','r')
+  local cityscope = f:read('*l')
+  f:close()
+  local cityscope = cityscope:match('^%w+://([^:/]+)')
+  local cmd = '/bin/echo | /usr/bin/nc -w2 %s 443'
+  local cmd = string.format(cmd,cityscope)
+  return os.execute(cmd) == 0
 end
 
 function get_dhcp_leases()
@@ -101,6 +142,23 @@ function support.is_port2_plugged()
   else
     return true
   end
+end
+
+function support.get_ip_gateway()
+  local cmd = '/bin/ubus call network.interface.wan status'
+  for i=1,3 do
+    rc = io.popen(cmd):read('*a')
+    if rc then
+      break
+    end
+    nixio.nanosleep(3)
+  end
+  if not rc then
+    nixio.syslog('err','Failed to call ubus')
+    return
+  end
+  local ubus_res = json.parse(rc)
+  return ubus_res.route[1].nexthop
 end
 
 function print_lease_json()
@@ -231,6 +289,17 @@ function resolve_portal()
   end
   local portal_ip = dns_result[1].address
   return portal_ip
+end
+
+function support.ping(host)
+  if not host then
+    nixio.syslog('err','No host in ping')
+    return false 
+  end
+  local cmd = '/bin/ping -w 3 %s'
+  local cmd = string.format(cmd,host)
+  local s = io.popen(cmd):read('*a')
+  return s  
 end
 
 function support.troubleshoot()
