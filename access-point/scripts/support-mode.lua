@@ -13,6 +13,32 @@ uci = require 'luci.model.uci'
 portal = require 'portal_proxy'
 lease  = require 'lease_file_reader'
 
+local lock = fs.mkdir('/tmp/8888.lock')
+if lock then
+  local cmd = '/usr/sbin/iptables -A INPUT -p tcp -m tcp --dport 8888 -m conntrack --ctstate NEW -j ACCEPT'
+  local x = os.execute(cmd)
+  if x ~= 0 then
+    syslog.nixio('err','support mode: failed to enable rule ' .. cmd)
+  end
+end
+
+-- Set listen ip for LUCI interface in troubleshooting mode
+local cursor = uci.cursor()
+local new_value = {}
+new_value[1] = '10.168.168.1:8888'
+local listen_http = cursor:get('uhttpd','main','listen_http')
+if listen_http ~= new_value[1] then
+  local set_res = cursor:set('uhttpd','main','listen_http',new_value)
+  if not set_res then
+    nixio.syslog('err','failed to set new conf uci')
+  end
+  local commit = cursor:commit('uhttpd')
+  if not commit then
+    nixio.syslog('err','failed to uci commit uhttpd')
+  end
+  reload.uhttpd()
+end
+
 local cmd = '/usr/bin/pgrep -f "/usr/sbin/hostapd -B -P /tmp/hostapd.support.pid /etc/hostapd.support.conf"'
 local support_hostapd = os.execute(cmd)
 if support_hostapd == 0 then
@@ -31,14 +57,6 @@ nixio.nanosleep(1)
 reload.retry_hostapd('/etc/hostapd.support.conf')
 reload.bridge()
 reload.dnsmasq()
-local lock = fs.mkdir('/tmp/8888.lock')
-if lock then
-  local cmd = '/usr/sbin/iptables -A INPUT -p tcp -m tcp --dport 8888 -m conntrack --ctstate NEW -j ACCEPT'
-  local x = os.execute(cmd)
-  if x ~= 0 then
-    syslog.nixio('err','support mode: failed to enable rule ' .. cmd)
-  end
-end
 
 local user_list = io.open('/tmp/dhcp.leases')
 for line in user_list:lines() do
@@ -47,16 +65,3 @@ for line in user_list:lines() do
   portal.deauthenticate_user(user_ip,user_mac)
 end
 
--- Set listen ip for LUCI interface in troubleshooting mode
-local cursor = uci.cursor()
-local new_value = {}
-new_value[1] = '10.168.168.1:8888'
-local set_res = cursor:set('uhttpd','main','listen_http',new_value)
-if not set_res then
-  nixio.syslog('err','failed to set new conf uci')
-end
-local commit = cursor:commit('uhttpd')
-if not commit then
-  nixio.syslog('err','failed to uci commit uhttpd')
-end
-reload.uhttpd()
