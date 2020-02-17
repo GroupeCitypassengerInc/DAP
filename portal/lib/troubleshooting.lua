@@ -206,6 +206,30 @@ function support.has_access_to_portal()
   if not cst.PortalUrl then
     return false
   end
+  local cmd = '/usr/bin/curl '
+            ..'--retry 1 --retry-delay 2 '
+            ..'-w %%{http_code} '
+            ..'-G '
+            ..'--data-urlencode "digilan-token-action=version" '
+            ..'-m3 '
+            ..'--fail '
+            ..'-o /tmp/curl_portal_version '
+            ..'"%s" 2>/tmp/curl_check_portal_stderr'
+  local cmd = string.format(cmd,cst.PortalUrl)
+  response,exit = helper.command(cmd)
+  if exit ~= 0 then
+    return false
+  end
+  if response ~= '200' then
+    return false
+  end
+  return true
+end
+
+function netcat_portal()
+  if not cst.PortalUrl then
+    return false
+  end
   local host = cst.PortalUrl:match('^%w+://([^:/]+)')
   local port = cst.PortalUrl:match('%d+$')
   local cmd = '/bin/echo | /usr/bin/nc -w2 %s %d'
@@ -328,7 +352,7 @@ function support.troubleshoot()
     uhttpd.send('Netcat to '
                .. cst.PortalUrl:match('^%w+://([^:/]+)') 
                .. ': ' 
-               .. tostring(support.has_access_to_portal()))
+               .. tostring(netcat_portal()))
   end
   uhttpd.send('\r\n')
   uhttpd.send('======= CONFIGURATION CITYSCOPE ======\r\n')
