@@ -21,7 +21,6 @@ service odhcpd  start
 /etc/init.d/sysntpd start
 /etc/init.d/dnsmasq disable
 /etc/init.d/dnsmasq stop
-/etc/rules.sh
 mkdir /var/localdb
 mkdir /var/tmpdb
 mkfifo /var/dns.log
@@ -57,3 +56,4 @@ swconfig dev switch0 set apply
 swconfig dev switch0 set enable_vlan 1
 swconfig dev switch0 set apply
 
+/etc/rules.sh
