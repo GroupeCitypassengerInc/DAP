@@ -7,6 +7,7 @@ local util = require 'luci.util'
 local nixio = require 'nixio'
 local data = require 'LIP'
 local uci = require 'luci.model.uci'
+local fs = require 'nixio.fs'
 
 support = {}
 
@@ -211,7 +212,7 @@ function support.has_access_to_portal()
             ..'-w %%{http_code} '
             ..'-G '
             ..'--data-urlencode "digilan-token-action=version" '
-            ..'-m3 '
+            ..'-m8 '
             ..'--fail '
             ..'-o /tmp/curl_portal_version '
             ..'"%s" 2>/tmp/curl_check_portal_stderr'

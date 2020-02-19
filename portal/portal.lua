@@ -41,6 +41,11 @@ function handle_request(env)
     end
   end
   f:close()
+
+  if portal_proxy.status_user(user_ip,user_mac) == "Authenticated" then
+    portal_proxy.success()
+    return
+  end
   
   local user_status = portal_proxy.status_user(user_ip,user_mac)
   if user_status ~= 'Authenticated' then
