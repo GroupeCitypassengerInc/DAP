@@ -19,13 +19,15 @@ iptables -P FORWARD DROP
 
 ### PREROUTING
 
+iptables -t nat -A PREROUTING -i bridge1 -p tcp --dport 443 -d 137.74.163.5/32 -j ACCEPT
 iptables -t nat -A PREROUTING -i bridge1 -p tcp --dport 80 -s 10.168.168.0/24 -j DNAT --to-destination 10.168.168.1:80
+iptables -t nat -A PREROUTING -i bridge1 -p tcp --dport 443 -s 10.168.168.0/24 -j DNAT --to-destination 10.168.168.1:80
 
 ### INPUT
 
+iptables -A INPUT -p tcp -s 10.168.168.0/24 -d $ip_wan/32 -m conntrack --ctstate NEW -j REJECT
 iptables -A INPUT -m conntrack --ctstate ESTABLISHED -j ACCEPT
 iptables -A INPUT -m conntrack --ctstate RELATED -j ACCEPT
-iptables -A INPUT -p tcp -s 10.168.168.0/24 -d $ip_wan/24 -m conntrack --ctstate NEW -j REJECT
 iptables -A INPUT -i lo -j ACCEPT
 iptables -A INPUT -p icmp --icmp-type 8 -m conntrack --ctstate NEW -j ACCEPT
 iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW -j ACCEPT
