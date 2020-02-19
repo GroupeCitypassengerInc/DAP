@@ -28,6 +28,11 @@ function handle_request(env)
     os.exit()
   end
 
+  if portal_proxy.status_user(user_ip,user_mac) == "Authenticated" then
+    portal_proxy.success()
+    return
+  end
+
   local re = "ws/wifi/public_wifi/auth.cgi%?session_id%=[0-9a-f]+%&secret=[0-9a-f]+%&type%=digilantoken"
   if url_path == string.match(url_path,re) then
     local query_string = env.QUERY_STRING
@@ -36,7 +41,7 @@ function handle_request(env)
     local secret = params["secret"]
     if portal_proxy.validate(user_mac,user_ip,sid,secret) == true then
       portal_proxy.success()
-      os.exit()
+      return true 
     end    
   end
 

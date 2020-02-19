@@ -186,7 +186,14 @@ function proxy.deauthenticate_user(user_ip,user_mac)
   if x == 2 then
     nixio.syslog("warning",cmd .. " failed with exit code "..x)
   end
-  cmd = "/usr/sbin/iptables -t nat -D PREROUTING -p tcp -i bridge1 -s %s -m mac --mac-source %s --dport 80 -j ACCEPT"
+  cmd = "/usr/sbin/iptables -t nat -D PREROUTING -p tcp -i bridge1 -s %s -m mac --mac-source %s --dport 80 -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT"
+  cmd = string.format(cmd,user_ip,user_mac)
+  x = os.execute(cmd)
+  x = x / 256
+  if x == 2 then
+    nixio.syslog("warning",cmd .. " failed with exit code "..x)
+  end
+  cmd = "/usr/sbin/iptables -t nat -D PREROUTING -p tcp -i bridge1 -s %s -m mac --mac-source %s --dport 443 -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT"
   cmd = string.format(cmd,user_ip,user_mac)
   x = os.execute(cmd)
   x = x / 256
@@ -240,7 +247,15 @@ function set_iptables_rule_for_internet_access(user_ip,user_mac)
     fs.remove(cst.tmpdb .. "/" .. user_mac)
     return false
   end
-  cmd_auth = "/usr/sbin/iptables -t nat -I PREROUTING -p tcp -i bridge1 -s %s -m mac --mac-source %s --dport 80 -j ACCEPT"
+  cmd_auth = "/usr/sbin/iptables -t nat -I PREROUTING -p tcp -i bridge1 -s %s -m mac --mac-source %s --dport 80 -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT"
+  cmd_auth = string.format(cmd_auth,user_ip,user_mac)
+  a = os.execute(cmd_auth)
+  if a ~= 0 then
+    nixio.syslog("err", cmd_auth .. " failed with exit code: " .. a)
+    fs.remove(cst.tmpdb .. "/" .. user_mac)
+    return false
+  end
+  cmd_auth = "/usr/sbin/iptables -t nat -I PREROUTING -p tcp -i bridge1 -s %s -m mac --mac-source %s --dport 443 -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT"
   cmd_auth = string.format(cmd_auth,user_ip,user_mac)
   a = os.execute(cmd_auth)
   if a ~= 0 then
