@@ -19,6 +19,8 @@ local bssid  = require 'bssid-helper'
 local ini    = require 'check_config_changes'
 local sys    = require 'luci.sys'
 local uci    = require 'luci.model.uci'
+local split  = require 'lease_file_reader'
+local fw     = require 'firewall'
 
 --[[
 --
@@ -181,7 +183,7 @@ if current_rescue_host ~= new_rescue_host then
   parser.save(ini_file,d)  
   local cursor = uci.cursor()
   local new_value = {}
-  new_value[1] = '-i /root/.ssh/host_key '..new_rescue_host
+  new_value[1] = '-i /root/.ssh/host_key -y -N -T '..new_rescue_host
   local set_res = cursor:set('autossh','@autossh[0]','ssh',new_value)
   if not set_res then
     nixio.syslog('err','failed to set new conf uci')
@@ -274,6 +276,46 @@ if not dns_result then
 end
 
 local ip_portal = dns_result[1].address
+
+------------------------
+--------- UPDATE FIREWALL
+------------------------
+local cmd = '/usr/sbin/iptables-save | grep "wordpress portal"'
+current_rule = io.popen(cmd):read('*l')
+if not current_rule then
+  local new_rule = '/usr/sbin/iptables -t nat '
+                 ..'-I PREROUTING -d %s/32 '
+                 ..'-i bridge1 '
+                 ..'-p tcp -m comment --comment "wordpress portal" -m tcp '
+                 ..'--dport 443 -j ACCEPT'
+  local new_rule = string.format(new_rule,ip_portal)
+  local rc = os.execute(new_rule)
+  if rc ~= 0 then
+    nixio.syslog('err','Failed to add iptable rule for portal access')
+  end
+else
+  local args = split.split_line(current_rule,'[%w.-]+')
+  local current_portal_ip = args[4]
+  if current_portal_ip ~= ip_portal then
+    local old_rule = string.gsub(old_rule,'A','D',1)
+    local old_rule = '/usr/sbin/iptables -t nat '..old_rule
+    local rc = os.execute(old_rule)
+    if rc ~= 0 then
+      nixio.syslog('err','Failed to remove old portal rule')
+    else
+      local new_rule = '/usr/sbin/iptables -t nat '
+                     ..'-I PREROUTING -d %s/32 '
+                     ..'-i bridge1 '
+                     ..'-p tcp -m comment --comment "wordpress portal" -m tcp '
+                     ..'--dport 443 -j ACCEPT'
+      local new_rule = string.format(new_rule,ip_portal)
+      local rc = os.execute(new_rule)
+      if rc ~= 0 then
+        nixio.syslog('err','Failed to add iptable rule for portal access')
+      end
+    end
+  end
+end
 
 ------------------------
 --------- GET CONFIG WORDPRESS 
