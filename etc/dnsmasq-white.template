@@ -7,6 +7,7 @@ www.twitter.com
 twitter.com
 *.twimg.com
 accounts.google.com
+fonts.googleapis.com
 ssl.gstatic.com
 gstatic.com
 apis.google.com
@@ -18,8 +19,12 @@ accounts.google.es
 accounts.google.be
 accounts.google.it
 connect.facebook.net
+www.google.com
+captive.apple.com
+www.apple.com
 ocsp.int-x3.letsencrypt.org
 cert.int-x3.letsencrypt.org
 collection.wifi4eu.ec.europa.eu
 connectivitycheck.gstatic.com
+wifi4eucollectorprod.azurewebsites.net
 %%portal_host%%
