@@ -26,6 +26,10 @@ function constants.__init__()
     constants.PortalPage = constants.PortalUrl
   end
   constants.error_page = ini_conf_data.portal.error_page
+  constants.rule_refresh_time  = ini_conf_data.ap.refresh_rule_time
+  constants.rule_expiry_time  = ini_conf_data.ap.rule_expiry_time
+  constants.firewall_whitelist  = ini_conf_data.ap.firewall_whitelist
+  constants.firewall_whitelist_full  = ini_conf_data.ap.firewall_whitelist_full
 end
 
 constants.__init__()

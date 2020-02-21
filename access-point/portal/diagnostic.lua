@@ -11,6 +11,7 @@ uhttpd.send("<body>\r\n")
 uhttpd.send("<h1>Solo support</h1>\r\n")
 uhttpd.send("<p>Date: " .. troubleshooting.date() .. "</p>\r\n")
 uhttpd.send("<p>Hostname: " .. sys.hostname() .. "</p>\r\n")
+uhttpd.send("<p>Version: " .. troubleshooting.version_conf() .. "</p>\r\n")
 if troubleshooting.has_network() then
   local autossh_state = nil
   if troubleshooting.get_autossh_status() then

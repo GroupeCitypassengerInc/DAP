@@ -34,7 +34,6 @@ if has_portal then
     create_file .. '. Exit code: ' .. x)
   end
 else
-  dofile('/scripts/support-mode.lua')
   fs.remove(file_internet)
   create_file = string.format(create_file,file_nointernet)
   local x = os.execute(create_file)
@@ -42,5 +41,6 @@ else
     nixio.syslog('err','/scripts/interstate.lua: Failed to execute ' .. 
     create_file .. '. Exit code: ' .. x)
   end
+  dofile('/scripts/support-mode.lua')
 end
 os.exit()
