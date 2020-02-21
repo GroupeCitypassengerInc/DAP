@@ -1,6 +1,8 @@
+package.path = package.path .. ';/portal/lib/?.lua'
 local nixio = require 'nixio'
 local fw = {}
 local helper = require 'lease_file_reader'
+local cst = require 'proxy_constants'
 
 function fw.host_in_firewall_whitelist(host)
   local file = '/etc/firewall-white-full.conf'
@@ -15,10 +17,10 @@ function fw.host_in_firewall_whitelist(host)
 end
 
 function fw.is_reply_or_cached(line)
-  if string.match(line,'reply') then
+  if string.match(line,': reply [%w-.]+') then
     return true
   end
-  if string.match(line,'cached') then
+  if string.match(line,': cached [%w-.]+') then
     return true
   end
   return false
@@ -26,10 +28,9 @@ end
 
 function fw.update_firewall_rule(current_rule,host,ip,timestamp)
   local now = io.popen('/bin/date +%s'):read('*l')
-  if now - timestamp > 900 then
+  if now - timestamp > cst.rule_refresh_time then
     current_rule = string.gsub(current_rule,'A','D',1)
     current_rule = '/usr/sbin/iptables -t nat ' .. current_rule
-    print(current_rule)
     local rc = os.execute(current_rule)
     if rc ~= 0 then
       nixio.syslog('err','failed to remove rule '..old_rule)
@@ -51,24 +52,23 @@ function fw.add_firewall_rule(host,ip)
 end
 
 function fw.update_firewall(host,ip)
-  local ruleset = io.popen('iptables-save | /bin/grep "A PREROUTING"')
+  local ruleset = io.popen('/usr/sbin/iptables-save | /bin/grep "A PREROUTING"')
   local lines = ruleset:lines()
   exists = false
   for line in lines do
-    nixio.syslog('debug','updating for '..host..' and ip '..ip)
     -- rule exists for host check ip
     if line:match(ip) then
+      nixio.syslog('debug','updating for '..host..' and ip '..ip)
       exists = true
       -- if ip in rules check timestamp
       local args = helper.split_line(line,'[%w.-]+')
       timestamp = args[14]
       fw.update_firewall_rule(line,host,ip,timestamp)
       return
-    else
-      nixio.syslog('debug','ip '..ip.. ' is not in iptables adding new')
     end
   end
   if not exists then
+    nixio.syslog('debug','ip '..ip.. ' is not in iptables adding new')
     fw.add_firewall_rule(host,ip)
   end
 end

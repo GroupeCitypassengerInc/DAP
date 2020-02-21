@@ -3,17 +3,17 @@ local help = require 'lease_file_reader'
 local data = require 'luci.cbi.datatypes'
 local fw = require 'firewall'
 local nixio = require 'nixio'
+local fs = require 'nixio.fs'
 
 logs = nil
 if arg[1] then
   logs = io.open('/tmp/testfile','r')
 else
-  logs = io.popen('logread -f | grep dnsmasq')
+  logs = io.popen('/sbin/logread -f | /bin/grep dnsmasq')
 end
 
 -- read dnsmasq log
 for log in logs:lines() do
-  nixio.syslog('debug','HELO')
   if fw.is_reply_or_cached(log) then
     re = '[%w.-]+'
     local args = help.split_line(log,re)

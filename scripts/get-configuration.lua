@@ -75,7 +75,11 @@ local data =
     timeout=7200,
     mac_addr=path_addr,
     secret='',
-    ssid=''
+    ssid='',
+    refresh_rule_time=900,
+    rule_expiry_time=1800,
+    firewall_whitelist='/etc/firewall-white.conf',
+    firewall_whitelist_full='/etc/firewall-white-full.conf'
   },
   portal=
   {

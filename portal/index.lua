@@ -41,7 +41,11 @@ function handle_request(env)
     local secret = params["secret"]
     if portal_proxy.validate(user_mac,user_ip,sid,secret) == true then
       portal_proxy.success()
-      return true 
+      return true
+    else
+      uhttpd.send('Status: 400 Bad Request\r\n')
+      uhttpd.send('Content-Type: text/html\r\n\r\n')
+      uhttpd.send('Failed to validate user with mac: '..user_mac)
     end    
   end
 
@@ -58,15 +62,25 @@ function handle_request(env)
     local create_user = fs.mkdir(path_db)
     -- First request
     if create_user then
+      local re = '^(%w+)://(.+)$'
       local portal_url = portal_proxy.initialize_redirected_client(user_ip,user_mac)
-      uhttpd.send('Status: 200 OK\r\n')
-      uhttpd.send('Content-Type: text/html\r\n\r\n')
-      uhttpd.send('{"url":"' .. portal_url .. '"}')
+      if not portal_url:match(re) then
+        uhttpd.send('Status: 400 Bad Request\r\n')
+        uhttpd.send('Content-Type: text/html\r\n\r\n')
+        uhttpd.send('{"url":"' .. portal_url .. '"}')
+      else
+        uhttpd.send('Status: 200 OK\r\n')
+        uhttpd.send('Content-Type: text/html\r\n\r\n')
+        uhttpd.send('{"url":"' .. portal_url .. '"}')
+      end
       return true
     else
       local errno = nixio.errno()
       local errmsg = nixio.strerror(errno)
       nixio.syslog("err","index.lua /create " .. errno .. ": " .. errmsg)
+      uhttpd.send('Status: 400 Bad Request\r\n')
+      uhttpd.send('Content-Type: text/html\r\n\r\n')
+      uhttpd.send('{"url":"mkdir create user in local db: ' .. errno .. ": " .. errmsg .. '"}')
     end
   end
 end

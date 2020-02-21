@@ -15,6 +15,16 @@ function support.date()
   return os.date("%a, %d %b %Y %H:%M:%S CET")
 end
 
+function support.version_conf()
+  local f = io.open('/etc/subversion_version.conf','r')
+  if not f then
+    return 'No version on this access point'
+  end
+  local version = f:read('*l')
+  f:close()
+  return version
+end
+
 function top()
   cmd = '/usr/bin/top -n1 -b'
   return io.popen(cmd):read('*a')
@@ -219,9 +229,11 @@ function support.has_access_to_portal()
   local cmd = string.format(cmd,cst.PortalUrl)
   response,exit = helper.command(cmd)
   if exit ~= 0 then
+    fs.mkdir('/tmp/exit_'..exit..'_'..os.date("%a, %d_%b_%Y-%H_%M_%S"))
     return false
   end
   if response ~= '200' then
+    fs.mkdir('/tmp/resp_'..exit..'_'..os.date("%a, %d_%b_%Y-%H_%M_%S"))
     return false
   end
   return true
