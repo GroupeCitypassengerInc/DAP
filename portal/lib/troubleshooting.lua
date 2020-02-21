@@ -16,7 +16,7 @@ function support.date()
 end
 
 function support.version_conf()
-  local f = io.open('/etc/subversion_version.conf','r')
+  local f = io.open('/etc/version.conf','r')
   if not f then
     return 'No version on this access point'
   end
