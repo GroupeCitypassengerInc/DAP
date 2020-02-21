@@ -36,7 +36,7 @@ iptables -A INPUT -p udp -s 10.168.168.0/24 --dport 5353 -m conntrack --ctstate 
 iptables -A INPUT -p tcp -s 10.168.168.0/24 --dport 5353 -m conntrack --ctstate NEW -j ACCEPT
 iptables -A INPUT -p tcp --dport 80 -m conntrack --ctstate NEW -j ACCEPT
 iptables -A INPUT -p tcp --dport 8081 -m conntrack --ctstate NEW -j ACCEPT
-iptables -A INPUT -p tcp --dport 443 -m conntrack --ctstate NEW,ESTABLISHED,INVALID -j ACCEPT
+iptables -A INPUT -p tcp --dport 443 -m conntrack --ctstate NEW -j ACCEPT
 iptables -A INPUT -p udp --sport 67:68 --dport 67:68 -m conntrack --ctstate NEW -j ACCEPT
 
 ### FORWARD
