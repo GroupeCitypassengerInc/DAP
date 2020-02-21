@@ -27,5 +27,6 @@ ocsp.int-x3.letsencrypt.org
 cert.int-x3.letsencrypt.org
 collection.wifi4eu.ec.europa.eu
 connectivitycheck.gstatic.com
+connectivity-check.ubuntu.com
 wifi4eucollectorprod.azurewebsites.net
 %%portal_host%%
