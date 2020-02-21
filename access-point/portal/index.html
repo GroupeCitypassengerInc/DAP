@@ -21,9 +21,7 @@
         setTimeout(function() {
           window.location.replace(data.url);
         }, 1500);
-      }).fail(function (err){
-        console.log(err);
-        console.log(err.responseText);
+      }).fail(function(err) {
         data = JSON.parse(err.responseText);
         if (data.url == '100') {
           $("#error-text").html(function () {
@@ -32,24 +30,24 @@
           return false;
         }
         if (data.url == '101') {
-          $("#error-text").html(function () {
+          $("#error-text").html(function() {
             return "<p>Failed to insert new user in wp db</p>";  
           });
           return false;
         }
         if (data.url == '102') {
-          $("#error-text").html(function () {
+          $("#error-text").html(function() {
             return "<p>Could not insert in localdb invalid data</p>";  
           });
           return false;
         }
         if (data.url.match(/^curl_error \d+$/)) {
-          $("#error-text").html(function () {
+          $("#error-text").html(function() {
             return "<p>digilan-token-action=create "+data.url+"</p>";  
           });
           return false;
         }
-        $("#error-text").html(function () {
+        $("#error-text").html(function() {
           return "<p>"+err.status+": "+data.url+"</p>";
         });
       });

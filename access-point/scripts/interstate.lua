@@ -26,6 +26,7 @@ if has_portal then
   os.execute(cmd)
   os.execute('/etc/init.d/autossh stop')
   dofile('/scripts/get-configuration.lua')
+  dofile('/scripts/update_firewall_whitelist.lua')
   dofile('/scripts/start-ap-services.lua')
   create_file = string.format(create_file,file_internet)
   local x = os.execute(create_file)

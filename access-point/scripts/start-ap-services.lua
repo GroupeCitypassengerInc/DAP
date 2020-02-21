@@ -76,7 +76,13 @@ end
 local check = '/usr/bin/pgrep -f "lua /scripts/firewall_walled_garden.lua"'
 local s = os.execute(check)
 if s ~= 0 then
-  os.execute('/usr/bin/lua /scripts/firewall_walled_garden.lua &')
+  -- cleanup logread processes 
+  local cmd = '/usr/bin/killall -q logread'
+  local s = os.execute(cmd)
+  if s ~= 0 then
+    nixio.syslog('debug','no logread killed')
+  end
+  local s = os.execute('/usr/bin/lua /scripts/firewall_walled_garden.lua &')
 end
 
 os.execute('/etc/init.d/uhttpd restart')
