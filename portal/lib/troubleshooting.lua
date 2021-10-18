@@ -215,10 +215,42 @@ end
 
 function support.has_access_to_portal()
   if not cst.PortalUrl then
+    nixio.syslog('warn','Cannot find a portal url')
     return false
   end
+  
+  -- fixme
+  -- cron does not order the call so this is called before overall internet check
+  -- 
+  local file_exists = os.execute('/usr/bin/test -e /tmp/internet')
+  if file_exists == 0 then
+    nixio.syslog('warn','Cannot find /tmp/internet file in has_portal !')
+    -- no hard fail
+  end
+  local ping_ok = os.execute('/bin/ping -w 3 -c 1 8.8.8.8') then
+    nixio.syslog('warn','Cannot find 8.8.8.8 with icmp !')
+      -- no hard fail
+  end
+  
+  local domain = cst.PortalUrl:match('^%w+://([^:/]+)')
+  local proto = cst.PortalUrl:match('^(%w+)://')
+  local port = 80
+  if proto == 'https' then
+    port = 443
+  end
+  port = PortalUrl:match('^%w+://[^:/]+:(%d+)') or port
+
+  local dns_result = nixio.getaddrinfo(domain,'inet')
+  if not dns_result then
+    nixio.syslog('err','Failed to resolve portal: '..cst.PortalUrl..' as fqdn '..domain)
+    return false
+  end
+
+  local ip_portal = dns_result[1].address
+  
   local cmd = '/usr/bin/curl '
-            ..'--retry 1 --retry-delay 2 '
+            ..'--retry 3 --retry-delay 5 '
+            ..'--resolve "'..domain..':'..port..':'..ip..'" '
             ..'-w %%{http_code} '
             ..'-G '
             ..'-m8 '
