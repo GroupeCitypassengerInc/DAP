@@ -250,7 +250,7 @@ function support.has_access_to_portal()
   
   local cmd = '/usr/bin/curl '
             ..'--retry 3 --retry-delay 5 '
-            ..'--resolve "'..domain..':'..port..':'..ip..'" '
+            ..'--resolve "'..domain..':'..port..':'..ip_portal..'" '
             ..'-w %%{http_code} '
             ..'-G '
             ..'-m8 '
