@@ -13,7 +13,7 @@ function r.dnsmasq()
     end
   end
   local DNSMASQ = '/usr/sbin/dnsmasq --conf-file='
-  local dnsmasq = DNSMASQ .. '/etc/dnsmasq-dhcp.conf --guard-ip=10.168.168.1'
+  local dnsmasq = DNSMASQ .. '/etc/dnsmasq-dhcp.conf --cb-resolv=/etc/dnsmasq.action.sh --guard-ip=10.168.168.1'
   local x = os.execute(dnsmasq)
   if x ~= 0 then
     nixio.syslog('err','Could not start ' .. dnsmasq  .. '. Exit code: '

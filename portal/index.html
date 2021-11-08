@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <link rel="dns-prefetch" href="//fonts.googleapis.com">
-    <link rel="dns-prefetch" href="//collection.wifi4eu.ec.europa.eu">
-    <link rel="dns-prefetch" href="//wifi4eucollectorprod.azurewebsites.net">
   </head>
   <body>
     <div>
@@ -20,7 +17,7 @@
         data = JSON.parse(data);
         setTimeout(function() {
           window.location.replace(data.url);
-        }, 1500);
+        }, 500);
       }).fail(function(err) {
         data = JSON.parse(err.responseText);
         if (data.url == '100') {
@@ -52,9 +49,6 @@
         });
       });
     </script>
-    <script src="//fonts.googleapis.com"></script>
-    <script src="//collection.wifi4eu.ec.europa.eu"></script>
-    <script src="//wifi4eucollectorprod.azurewebsites.net"></script>
   </body>
   <footer>
     v 1.4
