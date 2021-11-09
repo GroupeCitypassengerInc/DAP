@@ -3,5 +3,3 @@
 15 * * * * lua /scripts/archive-sessions.lua
 */5 * * * * lua /scripts/post-log.lua
 */5 * * * * lua /scripts/get-configuration.lua && lua /scripts/start-ap-services.lua
-*/30 * * * * lua /scripts/firewall_garbage_collector.lua
-0 * * * * lua /scripts/update_firewall_whitelist.lua

@@ -61,7 +61,7 @@ function handle_request(env)
     end
     if connected["authenticated"] then
       -- If user has been pre authenticated on this AP but then has authenticated on another AP
-      if status == "User in localdb" then
+      if user_status == "User in localdb" then
         local find = "/usr/bin/find /var/localdb/%s -name '*' -type d -mindepth 3"
         find = string.format(find,user_mac)
         local path = io.popen(find):read("*l")
@@ -77,9 +77,7 @@ function handle_request(env)
       local user_id = connected["user_id"]
       local date_auth = tonumber(connected["ap_validation"])
       portal_proxy.reauthenticate_user(user_ip,user_mac,sid,secret,date_auth,user_id)
-      uhttpd.send('Status: 200 OK\r\n')
-      uhttpd.send('Content-Type: text/html\r\n\r\n')
-      uhttpd.send('{"url":"' .. cst.landing_page .. '"}')
+      portal_proxy.success()
       return true
     end
   end

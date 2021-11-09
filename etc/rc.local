@@ -23,6 +23,7 @@ service odhcpd  start
 /etc/init.d/dnsmasq stop
 mkdir /var/localdb
 mkdir /var/tmpdb
+mkdir /var/atdb
 mkfifo /var/dns.log
 touch /var/dns.data
 

@@ -229,11 +229,9 @@ function support.has_access_to_portal()
   local cmd = string.format(cmd,cst.PortalUrl)
   response,exit = helper.command(cmd)
   if exit ~= 0 then
-    fs.mkdir('/tmp/exit_'..exit..'_'..os.date("%a, %d_%b_%Y-%H_%M_%S"))
     return false
   end
   if response ~= '200' then
-    fs.mkdir('/tmp/resp_'..exit..'_'..os.date("%a, %d_%b_%Y-%H_%M_%S"))
     return false
   end
   return true

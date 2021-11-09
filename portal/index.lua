@@ -46,6 +46,7 @@ function handle_request(env)
       uhttpd.send('Status: 400 Bad Request\r\n')
       uhttpd.send('Content-Type: text/html\r\n\r\n')
       uhttpd.send('Failed to validate user with mac: '..user_mac)
+      return
     end    
   end
 
