@@ -24,7 +24,6 @@ if has_portal then
   fs.remove('/tmp/8888.lock')
   local cmd = '/usr/sbin/iptables -D INPUT -p tcp -m tcp --dport 8888 -m conntrack --ctstate NEW -j ACCEPT'
   os.execute(cmd)
-  os.execute('/etc/init.d/autossh stop')
   create_file = string.format(create_file,file_internet)
   local x = os.execute(create_file)
   if x ~= 0 then

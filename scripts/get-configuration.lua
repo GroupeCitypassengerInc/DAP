@@ -20,6 +20,7 @@ local ini    = require 'check_config_changes'
 local sys    = require 'luci.sys'
 local uci    = require 'luci.model.uci'
 local split  = require 'lease_file_reader'
+local support = require "troubleshooting"
 
 --[[
 --
@@ -179,6 +180,10 @@ if not resp['rescuehost'] then
 end
 if current_rescue_host ~= new_rescue_host then
   -- Update in ini file and uci
+  if (support.get_autossh_status()) then
+    support.stop_autossh()
+    nixio.syslog('info','Stop autossh')
+  end
   local d = parser.load(ini_file) 
   d.ap.rescue_host = new_rescue_host
   parser.save(ini_file,d)  
@@ -194,6 +199,10 @@ if current_rescue_host ~= new_rescue_host then
     nixio.syslog('err','failed to uci commit uhttpd')
   end
   nixio.syslog('info', 'Rescue host has been updated')
+  if not(new_rescue_host == nil or new_rescue_host == '') then
+    support.start_autossh()
+    nixio.syslog('info','start autossh'..new_rescue_host)
+  end
 else
   nixio.syslog('info', 'Rescue host is up to date')
 end
