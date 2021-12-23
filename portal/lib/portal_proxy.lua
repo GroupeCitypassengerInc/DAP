@@ -4,6 +4,7 @@
 -- it will discover local IP and MAC and check secrets
 -- to open LocalFirewall , hence the internet access
 --
+package.path   = package.path .. ";/scripts/lib/?.lua"
 local cst      = require "proxy_constants"
 local ut       = require "check"
 local json     = require "luci.jsonc"
@@ -12,6 +13,8 @@ local fs       = require "nixio.fs"
 local helper   = require "helper"
 local http     = require "luci.http"
 local sys      = require "luci.sys"
+local at       = require "at"
+local firewall = require "firewall"
 local proxy    = {}
 
 function redirect(url)
@@ -33,6 +36,13 @@ function proxy.serve_portal_to_preauthenticated_user(user_mac,user_ip)
   local select_db = table.concat(params,"/")
   local cmd_sid   = "/bin/ls " .. select_db
   local sid_db    = io.popen(cmd_sid):read("*l")
+  local rc = fs.mkdir(cst.atdb .. "/" .. user_ip)
+  if rc then
+    at.create_at_job(user_ip)
+    fs.mkdir(cst.atdb .. "/" .. user_ip .. "/" .. job_id)
+  else
+    nixio.syslog("info", "job for " .. user_ip .. " already exists")
+  end
   local query_table = {
     session_id=sid_db,
     mac=user_mac
@@ -114,6 +124,14 @@ function proxy.initialize_redirected_client(user_ip,user_mac)
     session_id=sid,
     mac=user_mac
   }
+  nixio.syslog("info","Creating at job for " .. user_mac)
+  local rc = fs.mkdir(cst.atdb .. "/" .. user_ip)
+  if rc then
+    local job_id = at.create_at_job(user_ip)
+    fs.mkdir(cst.atdb .. "/" .. user_ip .. "/" .. job_id)
+  else
+    nixio.syslog("info", "job for " .. user_ip .. " already exists")
+  end
   -- return a 302
   nixio.syslog("info","Redirecting user " .. user_mac .. " to portal")
   local rdrinfo = http.build_querystring(query_table)
@@ -137,7 +155,22 @@ function proxy.validate(user_mac,user_ip,sid,secret)
   local params = {cst.localdb,user_mac,user_ip,sid,secret}
   local path   = table.concat(params,"/")
   local mkdir  = fs.mkdir(path .. "/" .. user_id)
+  local cmd = "/bin/ls %s"
+  local p = table.concat({cst.atdb,user_ip},"/")
+  local cmd = string.format(cmd, p)
+  local job_id = io.popen(cmd):read("*l")
   if mkdir == true then
+    if tonumber(job_id) then
+      at.delete_at_job(job_id)
+      local job = p .. "/" .. job_id
+      if fs.rmdir(job) then
+        nixio.syslog("err", "failed to rmdir " .. job) 
+      end
+      if fs.rmdir(p) then
+        nixio.syslog("err", "failed to rmdir " .. p)
+      end
+    end
+    firewall.end_user_session(user_ip)
     authorize_access(user_ip,user_mac)
     nixio.syslog("info","User with mac " .. user_mac .. " and ip " ..
     user_ip .. " has been authenticated.")
@@ -145,6 +178,16 @@ function proxy.validate(user_mac,user_ip,sid,secret)
   else
     local errno = nixio.errno()
     local errmsg = nixio.strerror(errno)
+    if tonumber(job_id) then
+      at.delete_at_job(job_id)
+      local job = p .. "/" .. job_id
+      if fs.rmdir(job) then
+        nixio.syslog("err", "failed to rmdir " .. job) 
+      end
+      if fs.rmdir(p) then
+        nixio.syslog("err", "failed to rmdir " .. p)
+      end
+    end
     if errno == 17 then
       return true
     end

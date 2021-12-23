@@ -57,12 +57,11 @@ if s ~= 0 then
   local x = os.execute(cmd)
 end
 
-local check = '/usr/bin/pgrep -f "dnsmasq --conf-file=/etc/dnsmasq-dhcp.conf --guard-ip=10.168.168.1"'
+local check = '/usr/bin/pgrep -f "dnsmasq --conf-file=/etc/dnsmasq-dhcp.conf --cb-resolv=/etc/dnsmasq.action.sh --guard-ip=10.168.168.1"'
 local s = os.execute(check)
 if s ~= 0 then
   reload.dnsmasq()
 end
-
 local check = '/usr/bin/pgrep -f "dnsmasq --conf-file=/etc/dnsmasq.portal"'
 local s = os.execute(check)
 if s ~= 0 then
@@ -72,17 +71,6 @@ local check = '/usr/bin/pgrep -f "lua /scripts/logger.lua"'
 local s = os.execute(check)
 if s ~= 0 then
   reload.logger()
-end
-local check = '/usr/bin/pgrep -f "lua /scripts/firewall_walled_garden.lua"'
-local s = os.execute(check)
-if s ~= 0 then
-  -- cleanup logread processes 
-  local cmd = '/usr/bin/killall -q logread'
-  local s = os.execute(cmd)
-  if s ~= 0 then
-    nixio.syslog('debug','no logread killed')
-  end
-  local s = os.execute('/usr/bin/lua /scripts/firewall_walled_garden.lua &')
 end
 
 os.execute('/etc/init.d/uhttpd restart')

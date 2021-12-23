@@ -215,25 +215,55 @@ end
 
 function support.has_access_to_portal()
   if not cst.PortalUrl then
+    nixio.syslog('warn','Cannot find a portal url')
     return false
   end
+  
+  -- fixme
+  -- cron does not order the call so this is called before overall internet check
+  -- 
+  local file_exists = os.execute('/usr/bin/test -e /tmp/internet')
+  if file_exists ~= 0 then
+    nixio.syslog('warning','Cannot find /tmp/internet file in has_portal !')
+    -- no hard fail
+  end
+  local ping_ok = os.execute('/bin/ping -w 3 -c 1 8.8.8.8')
+  if ping_ok ~= 0 then
+    nixio.syslog('warning','Cannot find 8.8.8.8 with icmp !')
+      -- no hard fail
+  end
+  
+  local domain = cst.PortalUrl:match('^%w+://([^:/]+)')
+  local proto = cst.PortalUrl:match('^(%w+)://')
+  local port = 80
+  if proto == 'https' then
+    port = 443
+  end
+  port = cst.PortalUrl:match('^%w+://[^:/]+:(%d+)') or port
+
+  local dns_result = nixio.getaddrinfo(domain,'inet')
+  if not dns_result then
+    nixio.syslog('err','Failed to resolve portal: '..cst.PortalUrl..' as fqdn '..domain)
+    return false
+  end
+
+  local ip_portal = dns_result[1].address
+  
   local cmd = '/usr/bin/curl '
-            ..'--retry 1 --retry-delay 2 '
+            ..'--retry 3 --retry-delay 5 '
+            ..'--resolve "'..domain..':'..port..':'..ip_portal..'" '
             ..'-w %%{http_code} '
             ..'-G '
-            ..'--data-urlencode "digilan-token-action=version" '
             ..'-m8 '
             ..'--fail '
             ..'-o /tmp/curl_portal_version '
-            ..'"%s" 2>/tmp/curl_check_portal_stderr'
+            ..'"%s/wp-content/plugins/digilan-token/version.txt" 2>/tmp/curl_check_portal_stderr'
   local cmd = string.format(cmd,cst.PortalUrl)
   response,exit = helper.command(cmd)
   if exit ~= 0 then
-    fs.mkdir('/tmp/exit_'..exit..'_'..os.date("%a, %d_%b_%Y-%H_%M_%S"))
     return false
   end
   if response ~= '200' then
-    fs.mkdir('/tmp/resp_'..exit..'_'..os.date("%a, %d_%b_%Y-%H_%M_%S"))
     return false
   end
   return true

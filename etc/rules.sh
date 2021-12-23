@@ -42,5 +42,6 @@ iptables -A INPUT -p udp --sport 67:68 --dport 67:68 -m conntrack --ctstate NEW 
 ### FORWARD
 
 iptables -t nat -A POSTROUTING -o br-wan -j MASQUERADE
+iptables -A FORWARD -s 10.168.168.0/24 -d $ip_wan/24 -p tcp -m tcp --dport 80 -j DROP
 iptables -A FORWARD -i br-wan -j ACCEPT
 iptables -A FORWARD -o br-wan -j ACCEPT

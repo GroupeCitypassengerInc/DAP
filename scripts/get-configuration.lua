@@ -20,7 +20,7 @@ local ini    = require 'check_config_changes'
 local sys    = require 'luci.sys'
 local uci    = require 'luci.model.uci'
 local split  = require 'lease_file_reader'
-local fw     = require 'firewall'
+local support = require "troubleshooting"
 
 --[[
 --
@@ -66,7 +66,8 @@ local data =
   localdb=
   {
     path='/var/localdb',
-    tmp='/var/tmpdb'
+    tmp='/var/tmpdb',
+    atdb='/var/atdb'
   },
   ap=
   {
@@ -76,10 +77,7 @@ local data =
     mac_addr=path_addr,
     secret='',
     ssid='',
-    refresh_rule_time=900,
-    rule_expiry_time=1800,
-    firewall_whitelist='/etc/firewall-white.conf',
-    firewall_whitelist_full='/etc/firewall-white-full.conf'
+    at_timeout=900
   },
   portal=
   {
@@ -182,6 +180,10 @@ if not resp['rescuehost'] then
 end
 if current_rescue_host ~= new_rescue_host then
   -- Update in ini file and uci
+  if (support.get_autossh_status()) then
+    support.stop_autossh()
+    nixio.syslog('info','Stop autossh')
+  end
   local d = parser.load(ini_file) 
   d.ap.rescue_host = new_rescue_host
   parser.save(ini_file,d)  
@@ -197,6 +199,10 @@ if current_rescue_host ~= new_rescue_host then
     nixio.syslog('err','failed to uci commit uhttpd')
   end
   nixio.syslog('info', 'Rescue host has been updated')
+  if not(new_rescue_host == nil or new_rescue_host == '') then
+    support.start_autossh()
+    nixio.syslog('info','start autossh'..new_rescue_host)
+  end
 else
   nixio.syslog('info', 'Rescue host is up to date')
 end
@@ -280,46 +286,6 @@ if not dns_result then
 end
 
 local ip_portal = dns_result[1].address
-
-------------------------
---------- UPDATE FIREWALL
-------------------------
-local cmd = '/usr/sbin/iptables-save | grep "wordpress portal"'
-current_rule = io.popen(cmd):read('*l')
-if not current_rule then
-  local new_rule = '/usr/sbin/iptables -t nat '
-                 ..'-I PREROUTING -d %s/32 '
-                 ..'-i bridge1 '
-                 ..'-p tcp -m comment --comment "wordpress portal" -m tcp '
-                 ..'--dport 443 -j ACCEPT'
-  local new_rule = string.format(new_rule,ip_portal)
-  local rc = os.execute(new_rule)
-  if rc ~= 0 then
-    nixio.syslog('err','Failed to add iptable rule for portal access')
-  end
-else
-  local args = split.split_line(current_rule,'[%w.-]+')
-  local current_portal_ip = args[4]
-  if current_portal_ip ~= ip_portal then
-    local old_rule = string.gsub(old_rule,'A','D',1)
-    local old_rule = '/usr/sbin/iptables -t nat '..old_rule
-    local rc = os.execute(old_rule)
-    if rc ~= 0 then
-      nixio.syslog('err','Failed to remove old portal rule')
-    else
-      local new_rule = '/usr/sbin/iptables -t nat '
-                     ..'-I PREROUTING -d %s/32 '
-                     ..'-i bridge1 '
-                     ..'-p tcp -m comment --comment "wordpress portal" -m tcp '
-                     ..'--dport 443 -j ACCEPT'
-      local new_rule = string.format(new_rule,ip_portal)
-      local rc = os.execute(new_rule)
-      if rc ~= 0 then
-        nixio.syslog('err','Failed to add iptable rule for portal access')
-      end
-    end
-  end
-end
 
 ------------------------
 --------- GET CONFIG WORDPRESS 
