@@ -221,11 +221,10 @@ function support.has_access_to_portal()
             ..'--retry 1 --retry-delay 2 '
             ..'-w %%{http_code} '
             ..'-G '
-            ..'--data-urlencode "digilan-token-action=version" '
             ..'-m8 '
             ..'--fail '
             ..'-o /tmp/curl_portal_version '
-            ..'"%s" 2>/tmp/curl_check_portal_stderr'
+            ..'"%s/wp-content/plugins/digilan-token/version.txt" 2>/tmp/curl_check_portal_stderr'
   local cmd = string.format(cmd,cst.PortalUrl)
   response,exit = helper.command(cmd)
   if exit ~= 0 then
